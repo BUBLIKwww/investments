@@ -51,11 +51,19 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   let res: Response;
   try {
     res = await fetch(url, { ...init, headers });
-  } catch {
+  } catch (cause) {
+    const hint =
+      typeof cause === "object" &&
+      cause !== null &&
+      "message" in cause &&
+      typeof (cause as Error).message === "string" &&
+      (cause as Error).message.toLowerCase().includes("failed to fetch")
+        ? " Часто это CORS, блокировка смешанного контента (http/https) или неверный адрес API (проверьте VITE_API_BASE_URL при сборке)."
+        : "";
     throw new ApiError(
       0,
-      "Не удалось подключиться к серверу. Проверьте сеть, VPN или что backend запущен.",
-      undefined,
+      `Не удалось выполнить запрос к ${url}.${hint}`,
+      cause,
     );
   }
 
@@ -87,5 +95,13 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     return undefined as T;
   }
 
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch (cause) {
+    throw new ApiError(
+      502,
+      `Ответ сервера не JSON (${url}). Первые символы: ${text.slice(0, 120)}`,
+      cause,
+    );
+  }
 }

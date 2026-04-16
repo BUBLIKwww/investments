@@ -11,7 +11,7 @@ export function getUserFacingApiError(err: unknown): UserFacingApiError {
   if (err instanceof ApiError) {
     if (err.status === 0) {
       return {
-        title: "Нет соединения",
+        title: "Запрос не дошёл до сервера",
         message: err.message,
         isNetwork: true,
         status: 0,

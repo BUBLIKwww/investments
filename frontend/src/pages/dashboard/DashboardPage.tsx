@@ -76,7 +76,10 @@ export function DashboardPage() {
   }
 
   const data = portfolioQuery.data;
-  const isEmpty = !data || data.positions.length === 0;
+  const isEmpty =
+    !data ||
+    !Array.isArray(data.positions) ||
+    data.positions.length === 0;
   const busyPrices = refreshMutation.isPending;
 
   return (

@@ -13,8 +13,29 @@ import type {
   TopupHistoryRead,
 } from "@/shared/api/types";
 
+function normalizePortfolioRead(raw: unknown): PortfolioRead {
+  if (!raw || typeof raw !== "object") {
+    return {
+      total_invested_amount: "0",
+      total_current_amount: "0",
+      categories: [],
+      positions: [],
+    };
+  }
+  const o = raw as Record<string, unknown>;
+  const cats = o.categories;
+  const pos = o.positions;
+  return {
+    total_invested_amount: typeof o.total_invested_amount === "string" ? o.total_invested_amount : String(o.total_invested_amount ?? "0"),
+    total_current_amount: typeof o.total_current_amount === "string" ? o.total_current_amount : String(o.total_current_amount ?? "0"),
+    categories: Array.isArray(cats) ? (cats as PortfolioRead["categories"]) : [],
+    positions: Array.isArray(pos) ? (pos as PortfolioRead["positions"]) : [],
+  };
+}
+
 export async function getPortfolio(): Promise<PortfolioRead> {
-  return apiRequest<PortfolioRead>("/api/v1/portfolio");
+  const raw = await apiRequest<unknown>("/api/v1/portfolio");
+  return normalizePortfolioRead(raw);
 }
 
 export async function calculateTopup(payload: TopupCalculateRequest): Promise<TopupCalculateResponse> {
