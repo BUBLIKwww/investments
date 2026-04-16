@@ -19,7 +19,12 @@ class Settings(BaseSettings):
     APP_NAME: str = "Investment Assistant API"
     DEBUG: bool = False
     DATABASE_URL: str = "sqlite:///./data/dev.db"
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "https://web.telegram.org"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://secure-eagerness-production.up.railway.app",
+        "https://web.telegram.org",
+    ]
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
