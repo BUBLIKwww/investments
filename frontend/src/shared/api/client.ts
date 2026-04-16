@@ -12,21 +12,33 @@ export class ApiError extends Error {
   }
 }
 
-function joinUrl(base: string, path: string) {
-  if (path.startsWith("http")) return path;
-
-  if (base.startsWith("http")) {
-    return `${base.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
-  }
-
-  if (path.startsWith("/api/")) {
+/** Собирает абсолютный URL для fetch: base (origin или "/api") + path вида "/api/v1/...". */
+function joinUrl(base: string, path: string): string {
+  if (path.startsWith("http://") || path.startsWith("https://")) {
     return path;
   }
 
-  const b = base.replace(/\/$/, "");
-  const p = path.replace(/^\//, "");
-  if (!b) return `/${p}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (base.startsWith("http://") || base.startsWith("https://")) {
+    return `${stripTrailingSlash(base)}${normalizedPath}`;
+  }
+
+  // Dev: VITE_API_BASE_URL=/api + Vite proxy — path уже "/api/v1/...", уходит на тот же origin.
+  if (normalizedPath.startsWith("/api/")) {
+    return normalizedPath;
+  }
+
+  const b = stripTrailingSlash(base);
+  const p = normalizedPath.replace(/^\//, "");
+  if (!b) {
+    return `/${p}`;
+  }
   return `${b}/${p}`;
+}
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(/\/+$/, "");
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
