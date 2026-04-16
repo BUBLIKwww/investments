@@ -1,0 +1,90 @@
+from decimal import Decimal
+
+from sqlalchemy.orm import Session
+
+from app.domain.money import q_money, to_decimal
+from app.repositories.portfolio_repository import PortfolioRepository
+from app.repositories.strategy_repository import StrategyRepository
+from app.schemas.fund import FundRead
+from app.schemas.portfolio import CategorySummary, PortfolioPositionRead, PortfolioRead
+from app.services.pricing.db_provider import DbPricingProvider
+
+
+class PortfolioService:
+    def __init__(self, db: Session) -> None:
+        self._portfolio = PortfolioRepository(db)
+        self._strategy = StrategyRepository(db)
+        self._pricing = DbPricingProvider()
+
+    def get_portfolio(self, user_id: int) -> PortfolioRead:
+        positions = self._portfolio.list_positions(user_id)
+        categories = self._strategy.list_for_user(user_id)
+        cat_by_id = {c.id: c for c in categories}
+
+        total_invested = q_money(sum(to_decimal(p.invested_amount) for p in positions))
+
+        current_by_position: dict[int, Decimal] = {}
+        total_current = Decimal("0")
+        for p in positions:
+            if p.fund is None:
+                continue
+            unit = q_money(self._pricing.get_unit_price(p.fund))
+            cur = q_money(Decimal(int(p.total_units)) * unit)
+            current_by_position[int(p.id)] = cur
+            total_current += cur
+        total_current = q_money(total_current)
+
+        current_by_category: dict[int, Decimal] = {}
+        for p in positions:
+            cid = int(p.category_id)
+            current_by_category[cid] = current_by_category.get(cid, Decimal("0")) + current_by_position[int(p.id)]
+
+        summaries: list[CategorySummary] = []
+        for c in sorted(categories, key=lambda x: (x.sort_order, x.id)):
+            cur_amt = q_money(current_by_category.get(c.id, Decimal("0")))
+            cur_w = Decimal("0")
+            if total_current > 0:
+                cur_w = q_money(cur_amt / total_current * Decimal("100"))
+            summaries.append(
+                CategorySummary(
+                    category_id=c.id,
+                    category_name=c.name,
+                    target_percent=to_decimal(c.target_percent),
+                    current_weight_percent=cur_w,
+                    current_amount=cur_amt,
+                    invested_amount=q_money(
+                        sum(to_decimal(p.invested_amount) for p in positions if int(p.category_id) == c.id)
+                    ),
+                )
+            )
+
+        pos_reads: list[PortfolioPositionRead] = []
+        for p in positions:
+            cat = cat_by_id.get(int(p.category_id))
+            cur_amt = current_by_position.get(int(p.id), Decimal("0"))
+            cur_w = Decimal("0")
+            if total_current > 0:
+                cur_w = q_money(cur_amt / total_current * Decimal("100"))
+            pos_reads.append(
+                PortfolioPositionRead(
+                    id=p.id,
+                    user_id=p.user_id,
+                    category_id=p.category_id,
+                    fund_id=p.fund_id,
+                    category_name=cat.name if cat else "",
+                    total_lots=int(p.total_lots),
+                    total_units=int(p.total_units),
+                    invested_amount=to_decimal(p.invested_amount),
+                    average_buy_price=to_decimal(p.average_buy_price),
+                    current_amount=cur_amt,
+                    current_weight_percent=cur_w,
+                    fund=FundRead.model_validate(p.fund),
+                )
+            )
+
+        return PortfolioRead(
+            total_invested_amount=total_invested,
+            total_current_amount=total_current,
+            categories=summaries,
+            positions=pos_reads,
+        )

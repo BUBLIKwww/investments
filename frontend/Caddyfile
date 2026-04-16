@@ -1,0 +1,13 @@
+{
+	# Railway terminates TLS; контейнер слушает HTTP на $PORT.
+	auto_https off
+}
+
+:{$PORT:8080} {
+	root * /dist
+	encode gzip
+
+	# Сначала реальный файл из dist, иначе — SPA fallback на index.html.
+	try_files {path} /index.html
+	file_server
+}
