@@ -28,10 +28,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 
+# CORS: при allow_origins=["*"] спецификация запрещает allow_credentials=True — иначе preflight/ответ не пройдут.
+_cors_origins = ["*"] if settings.CORS_ALLOW_ALL else settings.CORS_ORIGINS
+_cors_credentials = False if settings.CORS_ALLOW_ALL else True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=_cors_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )

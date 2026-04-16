@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Investment Assistant API"
     DEBUG: bool = False
     DATABASE_URL: str = "sqlite:///./data/dev.db"
+    # Временный smoke-test на Railway: все origin (в main при этом credentials=False — иначе браузер не примет "*").
+    # После проверки поставьте false и задайте точные URL в CORS_ORIGINS.
+    CORS_ALLOW_ALL: bool = True
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
