@@ -8,6 +8,7 @@ from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
 from app.db.base import Base
+from app.services.portfolio_recalculation_service import PortfolioRecalculationService
 from app.services.seed_service import SeedService
 
 
@@ -18,6 +19,8 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         SeedService(db).ensure_seeded()
+        PortfolioRecalculationService(db).rebuild_positions_for_all_users()
+        db.commit()
     finally:
         db.close()
     yield

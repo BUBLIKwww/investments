@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getRebalance } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { ErrorBlock } from "@/shared/ui/ErrorBlock";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 import { LoadingBlock } from "@/shared/ui/LoadingBlock";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { SectionHeader } from "@/shared/ui/SectionHeader";
@@ -77,7 +78,7 @@ export function RebalancePage() {
           const d = parseDecimal(c.delta_percent);
           const cls = Number.isFinite(d) ? (d > 0 ? styles.deltaPos : d < 0 ? styles.deltaNeg : "") : "";
           return (
-            <div key={c.category_id} className={styles.card}>
+            <GlassSurface key={c.category_id} variant="strong" className={styles.card}>
               <div className={styles.head}>
                 <div>
                   <p className={styles.name}>{c.category_name}</p>
@@ -103,7 +104,7 @@ export function RebalancePage() {
                   <p className={styles.v}>{formatRub(c.current_amount)}</p>
                 </div>
               </div>
-            </div>
+            </GlassSurface>
           );
         })}
       </div>

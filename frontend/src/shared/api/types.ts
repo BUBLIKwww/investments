@@ -144,3 +144,32 @@ export type StrategyCategoryUpdatePayload = {
 export type StrategyUpdateRequest = {
   categories: StrategyCategoryUpdatePayload[];
 };
+
+export type TransactionOperationType = "buy" | "sell";
+
+export type InvestmentTransactionRead = {
+  id: number;
+  user_id: number;
+  category_id: number;
+  fund_id: number;
+  operation_type: TransactionOperationType;
+  quantity: number;
+  price_per_unit: string;
+  total_amount: string;
+  executed_at: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Тело POST/PUT сделки (Decimal на backend сериализуются строкой). */
+export type InvestmentTransactionWritePayload = {
+  fund_id: number;
+  category_id?: number | null;
+  operation_type: TransactionOperationType;
+  quantity: number;
+  price_per_unit: string;
+  total_amount: string;
+  executed_at: string;
+  note?: string | null;
+};

@@ -4,8 +4,8 @@ import styles from "./BottomNav.module.css";
 
 const items = [
   { to: "/", label: "Главная", end: true, icon: IconHome },
+  { to: "/transactions", label: "Сделки", end: false, icon: IconChart },
   { to: "/topup", label: "Пополнение", end: false, icon: IconPlus },
-  { to: "/calculation", label: "Расчёт", end: false, icon: IconCalc },
   { to: "/history", label: "История", end: false, icon: IconHistory },
   { to: "/settings", label: "Настройки", end: false, icon: IconGear },
 ] as const;
@@ -13,20 +13,22 @@ const items = [
 export function BottomNav() {
   return (
     <nav className={styles.nav} aria-label="Основная навигация">
-      <div className={styles.inner}>
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => [styles.item, isActive ? styles.itemActive : ""].join(" ")}
-          >
-            <span className={styles.icon} aria-hidden="true">
-              <item.icon />
-            </span>
-            <span>{item.label}</span>
-          </NavLink>
-        ))}
+      <div className={styles.shell}>
+        <div className={styles.inner}>
+          {items.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => [styles.item, isActive ? styles.itemActive : ""].join(" ")}
+            >
+              <span className={styles.icon} aria-hidden="true">
+                <item.icon />
+              </span>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </div>
       </div>
     </nav>
   );
@@ -45,6 +47,20 @@ function IconHome() {
   );
 }
 
+function IconChart() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none">
+      <path
+        d="M4 19h16M7 15V9m5 6V5m5 10v-4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconPlus() {
   return (
     <svg viewBox="0 0 24 24" fill="none">
@@ -52,25 +68,6 @@ function IconPlus() {
         d="M12 5v14M5 12h14"
         stroke="currentColor"
         strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconCalc() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none">
-      <path
-        d="M7 7h10M7 12h6M7 17h4"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <path
-        d="M17 17h.01"
-        stroke="currentColor"
-        strokeWidth="3"
         strokeLinecap="round"
       />
     </svg>

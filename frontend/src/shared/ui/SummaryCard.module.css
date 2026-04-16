@@ -1,31 +1,31 @@
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: 14px 14px;
+.inner {
+  padding: 18px 18px;
 }
 
 .label {
   margin: 0;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 750;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .value {
-  margin: 8px 0 0;
-  font-size: 26px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  margin: 10px 0 0;
+  font-family: var(--font-money);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
   line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
 .hint {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--text-secondary);
   line-height: 1.45;
+  font-weight: 500;
 }

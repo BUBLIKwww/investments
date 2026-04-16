@@ -1,9 +1,5 @@
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 12px 12px;
+.inner {
+  padding: 16px 16px;
 }
 
 .top {
@@ -15,48 +11,51 @@
 
 .name {
   margin: 0;
-  font-size: 14px;
-  font-weight: 850;
-  letter-spacing: -0.01em;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
 
 .pill {
   flex-shrink: 0;
   font-size: 11px;
-  font-weight: 850;
-  padding: 6px 10px;
-  border-radius: 999px;
+  font-weight: 650;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
 }
 
 .grid {
-  margin-top: 10px;
+  margin-top: 14px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 12px;
+  gap: 12px 14px;
 }
 
 .k {
   margin: 0;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 650;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .v {
-  margin: 4px 0 0;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  margin: 5px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
 .footer {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
@@ -65,17 +64,9 @@
 }
 
 .deltaPos {
-  color: #16a34a;
+  color: var(--success);
 }
 
 .deltaNeg {
-  color: #dc2626;
-}
-
-html[data-theme="dark"] .deltaPos {
-  color: #4ade80;
-}
-
-html[data-theme="dark"] .deltaNeg {
-  color: #f87171;
+  color: var(--danger);
 }

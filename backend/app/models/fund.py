@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.investment_transaction import InvestmentTransaction
     from app.models.portfolio_position import PortfolioPosition
     from app.models.strategy_category import StrategyCategory
     from app.models.topup_item import TopupItem
@@ -29,3 +30,4 @@ class Fund(Base):
     strategy_categories: Mapped[list["StrategyCategory"]] = relationship(back_populates="fund")
     positions: Mapped[list["PortfolioPosition"]] = relationship(back_populates="fund")
     topup_items: Mapped[list["TopupItem"]] = relationship(back_populates="fund")
+    investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(back_populates="fund")

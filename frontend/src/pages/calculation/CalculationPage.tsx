@@ -35,12 +35,14 @@ export function CalculationPage() {
     mutationFn: createTopup,
     onSuccess: async () => {
       setSaveError(null);
-      setSuccess(true);
       clearTopupCalculation(qc);
       await Promise.all([
         qc.invalidateQueries({ queryKey: queryKeys.portfolio }),
         qc.invalidateQueries({ queryKey: queryKeys.topupHistory }),
+        qc.invalidateQueries({ queryKey: queryKeys.transactions }),
+        qc.invalidateQueries({ queryKey: queryKeys.rebalance }),
       ]);
+      setSuccess(true);
     },
     onError: (err: unknown) => {
       setSaveError(getUserFacingApiError(err));
@@ -144,10 +146,12 @@ export function CalculationPage() {
   if (success) {
     return (
       <div>
-        <PageHeader title="Готово" subtitle="Пополнение сохранено" />
+        <PageHeader title="Готово" subtitle="Пополнение записано в историю" />
         <div className={styles.success}>
-          <p className={styles.successTitle}>Сохранено</p>
-          <p className={styles.successText}>Обновляем портфель и возвращаем вас на главный экран…</p>
+          <p className={styles.successTitle}>Пополнение подтверждено</p>
+          <p className={styles.successText}>
+            Портфель, категории и история обновлены. Сейчас откроется главный экран с новыми суммами.
+          </p>
         </div>
       </div>
     );
@@ -157,7 +161,18 @@ export function CalculationPage() {
 
   return (
     <div>
-      <PageHeader title="Результат расчёта" subtitle="Проверьте распределение перед сохранением" />
+      <PageHeader
+        title="Подтверждение пополнения"
+        subtitle="Ниже — предварительный расчёт с backend: фонды, лоты, акции и остаток. Деньги спишутся только после подтверждения."
+      />
+
+      <div className={styles.previewBanner}>
+        <ValidationBanner
+          variant="info"
+          title="Предварительный расчёт"
+          message="Пока вы не нажали «Подтвердить пополнение», сделки не выполняются и портфель не меняется."
+        />
+      </div>
 
       <div className={styles.panel}>
         <div className={styles.kpis}>
@@ -191,7 +206,7 @@ export function CalculationPage() {
         ) : null}
       </div>
 
-      <SectionHeader title="По категориям" subtitle="Детализация покупок" />
+      <SectionHeader title="По фондам и категориям" subtitle="Сколько уйдёт в покупку и сколько акций купится по каждой позиции" />
       <div className={styles.list}>
         {data.items.map((item) => (
           <TopupItemCard key={`${item.category_id}-${item.fund_id}`} item={item} />
@@ -208,7 +223,7 @@ export function CalculationPage() {
 
       <div className={styles.actions}>
         <Button variant="primary" disabled={saveMutation.isPending} onClick={() => saveMutation.mutate(payload)}>
-          Сохранить пополнение
+          Подтвердить пополнение
         </Button>
         <Button variant="secondary" disabled={saveMutation.isPending} onClick={() => navigate("/topup")}>
           Пересчитать

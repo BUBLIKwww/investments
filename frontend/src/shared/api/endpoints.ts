@@ -2,6 +2,8 @@ import { apiRequest } from "@/shared/api/client";
 import type {
   FundRead,
   FundsPricesRefreshResponse,
+  InvestmentTransactionRead,
+  InvestmentTransactionWritePayload,
   PortfolioRead,
   RebalanceRead,
   StrategyRead,
@@ -61,4 +63,35 @@ export async function refreshFundPrices(): Promise<FundsPricesRefreshResponse> {
 
 export async function getFundById(fundId: number): Promise<FundRead> {
   return apiRequest<FundRead>(`/api/v1/funds/${fundId}`);
+}
+
+export async function listTransactions(): Promise<InvestmentTransactionRead[]> {
+  return apiRequest<InvestmentTransactionRead[]>("/api/v1/transactions");
+}
+
+export async function getTransaction(transactionId: number): Promise<InvestmentTransactionRead> {
+  return apiRequest<InvestmentTransactionRead>(`/api/v1/transactions/${transactionId}`);
+}
+
+export async function createTransaction(payload: InvestmentTransactionWritePayload): Promise<InvestmentTransactionRead> {
+  return apiRequest<InvestmentTransactionRead>("/api/v1/transactions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTransaction(
+  transactionId: number,
+  payload: InvestmentTransactionWritePayload,
+): Promise<InvestmentTransactionRead> {
+  return apiRequest<InvestmentTransactionRead>(`/api/v1/transactions/${transactionId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTransaction(transactionId: number): Promise<void> {
+  return apiRequest<void>(`/api/v1/transactions/${transactionId}`, {
+    method: "DELETE",
+  });
 }

@@ -11,13 +11,20 @@ body {
   height: 100%;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   font-family: var(--font-sans);
-  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  background-color: var(--bg-page);
+  background-image: var(--bg-gradient);
+  background-attachment: fixed;
+  background-size: cover;
 }
 
 #root {
@@ -30,8 +37,15 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+/* Tabular figures for money-heavy UI */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 .sr-only {

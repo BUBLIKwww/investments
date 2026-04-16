@@ -1,4 +1,5 @@
 import { formatPercent, formatRub, parseDecimal } from "@/shared/lib/format";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 
 import styles from "./PositionCard.module.css";
 
@@ -17,7 +18,7 @@ export function PositionCard({ title, invested, currentWeightPercent, targetWeig
   const deltaCls = Number.isFinite(delta) ? (delta > 0 ? styles.deltaPos : delta < 0 ? styles.deltaNeg : "") : "";
 
   return (
-    <div className={styles.card}>
+    <GlassSurface className={styles.inner}>
       <div className={styles.top}>
         <p className={styles.name}>{title}</p>
         {badge ? <span className={styles.pill}>{badge}</span> : null}
@@ -42,6 +43,6 @@ export function PositionCard({ title, invested, currentWeightPercent, targetWeig
           </p>
         </div>
       </div>
-    </div>
+    </GlassSurface>
   );
 }

@@ -1,14 +1,26 @@
+.crossLink {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.crossLink a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.crossLink a:hover {
+  text-decoration: underline;
+}
+
 .list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: 12px 12px;
+  padding: 16px 16px;
 }
 
 .top {
@@ -20,45 +32,51 @@
 
 .title {
   margin: 0;
-  font-size: 14px;
-  font-weight: 950;
-  letter-spacing: -0.02em;
+  font-family: var(--font-money);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .sub {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--muted);
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .pill {
   flex-shrink: 0;
   font-size: 12px;
-  font-weight: 900;
-  padding: 6px 10px;
-  border-radius: 999px;
+  font-weight: 650;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
   background: var(--surface-2);
+  color: var(--muted);
 }
 
 .grid {
-  margin-top: 10px;
+  margin-top: 14px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 12px;
+  gap: 12px 14px;
 }
 
 .k {
   margin: 0;
-  font-size: 11px;
-  font-weight: 900;
+  font-size: 10px;
+  font-weight: 650;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .v {
-  margin: 4px 0 0;
-  font-size: 13px;
-  font-weight: 900;
+  margin: 5px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }

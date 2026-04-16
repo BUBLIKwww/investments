@@ -1,0 +1,146 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.links {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.inlineLink {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 4px 22px rgba(10, 100, 255, 0.25);
+}
+
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.listLink {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.listLink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: calc(var(--radius-glass) + 2px);
+}
+
+.row {
+  padding: 16px 16px;
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.15s var(--ease-out);
+}
+
+.row:active {
+  transform: scale(0.99);
+}
+
+.row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.sub {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pill {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 650;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+
+.pillBuy {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: rgba(29, 143, 84, 0.22);
+}
+
+.pillSell {
+  color: var(--danger);
+  background: rgba(212, 56, 61, 0.08);
+  border-color: rgba(212, 56, 61, 0.2);
+}
+
+html[data-theme="dark"] .pillSell {
+  background: rgba(255, 122, 122, 0.1);
+  border-color: rgba(255, 122, 122, 0.22);
+}
+
+.grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+
+.k {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.v {
+  margin: 5px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}

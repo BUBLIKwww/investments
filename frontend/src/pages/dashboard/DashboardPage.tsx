@@ -7,6 +7,7 @@ import { queryKeys } from "@/shared/api/query-keys";
 import { getUserFacingApiError } from "@/shared/lib/api-error-message";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ErrorBlock } from "@/shared/ui/ErrorBlock";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 import { LoadingBlock } from "@/shared/ui/LoadingBlock";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { PositionCard } from "@/shared/ui/PositionCard";
@@ -58,7 +59,7 @@ export function DashboardPage() {
   if (portfolioQuery.isPending) {
     return (
       <div>
-        <PageHeader title="Портфель" subtitle="Сводка по данным backend" />
+        <PageHeader title="Портфель" subtitle="Загружаем ваши данные" />
         <LoadingBlock label="Загружаем портфель…" />
       </div>
     );
@@ -68,7 +69,7 @@ export function DashboardPage() {
     const e = getUserFacingApiError(portfolioQuery.error);
     return (
       <div>
-        <PageHeader title="Портфель" subtitle="Сводка по данным backend" />
+        <PageHeader title="Портфель" subtitle="Не удалось получить сводку" />
         <ErrorBlock title={e.title} message={e.message} onRetry={() => void portfolioQuery.refetch()} />
       </div>
     );
@@ -80,7 +81,10 @@ export function DashboardPage() {
 
   return (
     <div>
-      <PageHeader title="Портфель" subtitle="Оценка по ценам фондов из backend" />
+      <PageHeader
+        title="Портфель"
+        subtitle={isEmpty ? "Начните с пополнения или добавьте сделку вручную" : "Сводка по стратегии и рынку"}
+      />
 
       {priceBanner ? (
         <div className={styles.bannerWrap}>
@@ -88,24 +92,37 @@ export function DashboardPage() {
         </div>
       ) : null}
 
+      {!isEmpty ? (
+        <section className={styles.hero} aria-label="Ключевые показатели">
+          <GlassSurface variant="strong" className={styles.heroCard}>
+            <p className={styles.heroEyebrow}>Оценка портфеля</p>
+            <p className={styles.heroFigure}>{formatRub(data.total_current_amount)}</p>
+            <div className={styles.heroMeta}>Вложено {formatRub(data.total_invested_amount)}</div>
+          </GlassSurface>
+        </section>
+      ) : null}
+
       <div className={styles.toolbar}>
         <Button type="button" variant="secondary" size="sm" disabled={busyPrices} onClick={() => refreshMutation.mutate()}>
           {busyPrices ? "Обновление цен…" : "Обновить цены"}
         </Button>
-        <p className={styles.toolbarHint}>Mock: случайное изменение цены каждого активного фонда на ±1–5%.</p>
+        <p className={styles.toolbarHint}>Демо: случайное изменение цены каждого активного фонда на ±1–5%.</p>
       </div>
 
       {isEmpty ? (
         <EmptyState
           title="Портфель пока пустой"
-          description="Сделайте первое пополнение — мы распределим сумму по вашей стратегии и покажем позиции."
+          description="Пополните счёт или занесите покупку в журнал сделок — позиции пересчитаются автоматически."
           actions={
             <>
               <Link className={styles.pillLink} to="/topup">
                 Пополнить
               </Link>
+              <Link className={styles.pillGhost} to="/transactions">
+                Сделки
+              </Link>
               <Link className={styles.pillGhost} to="/rebalance">
-                Ребалансировка
+                Ребаланс
               </Link>
             </>
           }
@@ -117,7 +134,7 @@ export function DashboardPage() {
             <SummaryCard
               label="Текущая оценка"
               value={formatRub(data.total_current_amount)}
-              hint="По текущим ценам фондов из backend"
+              hint="По ценам фондов на сервере"
             />
           </div>
 
@@ -125,12 +142,15 @@ export function DashboardPage() {
             <Link className={styles.pillLink} to="/topup">
               Пополнить
             </Link>
+            <Link className={styles.pillGhost} to="/transactions">
+              Сделки
+            </Link>
             <Link className={styles.pillGhost} to="/rebalance">
-              Ребалансировка
+              Ребаланс
             </Link>
           </div>
 
-          <SectionHeader title="Категории" subtitle="Сравнение целевых и текущих долей" />
+          <SectionHeader title="Категории" subtitle="Целевые и фактические доли" />
           <div className={styles.grid}>
             {data.categories.map((c) => (
               <PositionCard
@@ -146,12 +166,12 @@ export function DashboardPage() {
           <SectionHeader title="Позиции" subtitle="Фонды в портфеле" />
           <div className={styles.grid}>
             {data.positions.map((p) => (
-              <div key={p.id} className={styles.posCard}>
+              <GlassSurface key={p.id} className={styles.positionCard}>
                 <div className={styles.posTop}>
                   <div>
                     <p className={styles.posTitle}>{p.fund.name}</p>
                     <p className={styles.posSub}>
-                      {p.category_name} · {p.total_units} акций
+                      {p.category_name} · {p.total_units} шт.
                     </p>
                   </div>
                   <span className={styles.ticker}>{p.fund.ticker}</span>
@@ -170,11 +190,11 @@ export function DashboardPage() {
                     <p className={styles.v}>{formatPercent(p.current_weight_percent)}</p>
                   </div>
                   <div>
-                    <p className={styles.k}>Средняя цена</p>
+                    <p className={styles.k}>Средняя</p>
                     <p className={styles.v}>{formatRub(p.average_buy_price)}</p>
                   </div>
                 </div>
-              </div>
+              </GlassSurface>
             ))}
           </div>
         </>

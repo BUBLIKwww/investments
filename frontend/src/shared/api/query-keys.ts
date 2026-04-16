@@ -1,5 +1,6 @@
 export const queryKeys = {
   portfolio: ["portfolio"] as const,
+  transactions: ["transactions"] as const,
   topupHistory: ["topupHistory"] as const,
   rebalance: ["rebalance"] as const,
   strategy: ["strategy"] as const,

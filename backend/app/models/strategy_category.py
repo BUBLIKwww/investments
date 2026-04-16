@@ -8,6 +8,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.fund import Fund
+    from app.models.investment_transaction import InvestmentTransaction
     from app.models.portfolio_position import PortfolioPosition
     from app.models.topup_item import TopupItem
     from app.models.user import User
@@ -31,3 +32,4 @@ class StrategyCategory(Base):
     fund: Mapped["Fund"] = relationship(back_populates="strategy_categories")
     positions: Mapped[list["PortfolioPosition"]] = relationship(back_populates="category")
     topup_items: Mapped[list["TopupItem"]] = relationship(back_populates="category")
+    investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(back_populates="category")

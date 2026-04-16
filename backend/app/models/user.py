@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.investment_transaction import InvestmentTransaction
     from app.models.portfolio_position import PortfolioPosition
     from app.models.strategy_category import StrategyCategory
     from app.models.topup_history import TopupHistory
@@ -26,3 +27,4 @@ class User(Base):
     )
     portfolio_positions: Mapped[list["PortfolioPosition"]] = relationship(back_populates="user")
     topups: Mapped[list["TopupHistory"]] = relationship(back_populates="user")
+    investment_transactions: Mapped[list["InvestmentTransaction"]] = relationship(back_populates="user")

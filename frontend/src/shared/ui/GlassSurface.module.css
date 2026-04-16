@@ -1,0 +1,13 @@
+.root {
+  position: relative;
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-stroke);
+  box-shadow: var(--glass-shadow), 0 0 0 1px var(--glass-stroke-outer);
+  border-radius: var(--radius-glass);
+}
+
+.strong {
+  background: var(--glass-fill-strong);
+}

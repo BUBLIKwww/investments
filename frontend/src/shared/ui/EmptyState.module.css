@@ -1,41 +1,44 @@
 .wrap {
-  margin-top: 10px;
-  border: 1px dashed var(--border);
-  background: linear-gradient(180deg, var(--surface), var(--surface-2));
-  border-radius: var(--radius-lg);
-  padding: 22px 16px;
+  margin-top: 16px;
   text-align: center;
+  padding: 32px 22px;
+}
+
+.inner {
+  padding: 28px 20px;
 }
 
 .badge {
-  width: 52px;
-  height: 52px;
-  margin: 0 auto 12px;
-  border-radius: 16px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
+  border: 1px solid var(--glass-stroke);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 850;
-  letter-spacing: -0.02em;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: var(--text);
 }
 
 .text {
-  margin: 8px auto 0;
+  margin: 10px auto 0;
   max-width: 44ch;
-  color: var(--muted);
-  font-size: 13px;
+  color: var(--text-secondary);
+  font-size: 15px;
   line-height: 1.55;
+  font-weight: 500;
 }
 
 .actions {
-  margin-top: 14px;
+  margin-top: 20px;
   display: flex;
   justify-content: center;
   gap: 10px;

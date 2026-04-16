@@ -1,8 +1,11 @@
 .hero {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(37, 99, 235, 0));
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px;
+  background: var(--glass-fill-strong);
+  border: 1px solid var(--glass-stroke);
+  border-radius: var(--radius-glass);
+  padding: 20px 18px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
 }
 
 .heroTop {
@@ -14,96 +17,96 @@
 
 .priceLabel {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 650;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .priceValue {
-  margin: 6px 0 0;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  margin: 8px 0 0;
+  font-family: var(--font-money);
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
 .currency {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--muted);
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .status {
   flex-shrink: 0;
   font-size: 12px;
-  font-weight: 800;
-  padding: 6px 10px;
-  border-radius: 999px;
+  font-weight: 650;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--border);
 }
 
 .statusOn {
-  border-color: rgba(22, 163, 74, 0.35);
-  background: rgba(22, 163, 74, 0.1);
-  color: rgb(22, 101, 52);
+  border-color: rgba(29, 143, 84, 0.35);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .statusOff {
-  opacity: 0.9;
-}
-
-html[data-theme="dark"] .statusOn {
-  border-color: rgba(74, 222, 128, 0.35);
-  background: rgba(74, 222, 128, 0.12);
-  color: rgb(187, 247, 208);
+  opacity: 0.85;
+  color: var(--muted);
 }
 
 .updated {
-  margin: 12px 0 0;
-  font-size: 13px;
-  color: var(--muted);
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
   line-height: 1.45;
-}
-
-html[data-theme="dark"] .hero {
-  background: linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(96, 165, 250, 0));
+  font-weight: 500;
 }
 
 .grid {
-  margin-top: 12px;
+  margin-top: 14px;
   display: grid;
   gap: 10px;
 }
 
 .kpi {
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid var(--glass-stroke);
+  background: var(--glass-fill);
   border-radius: var(--radius-md);
-  padding: 12px;
+  padding: 14px;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-inset-highlight), 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .kpiLabel {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--muted);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 650;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
 .kpiValue {
   margin: 6px 0 0;
-  font-size: 16px;
-  font-weight: 850;
+  font-size: 17px;
+  font-weight: 600;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
 .kpiValueMono {
   margin: 6px 0 0;
-  font-size: 12px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 500;
   letter-spacing: -0.01em;
   word-break: break-all;
   font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }

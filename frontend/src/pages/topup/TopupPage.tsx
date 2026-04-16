@@ -56,7 +56,10 @@ export function TopupPage() {
 
   return (
     <div>
-      <PageHeader title="Пополнение" subtitle="Сумма и режим распределения" />
+      <PageHeader
+        title="Пополнение"
+        subtitle="Введите сумму и режим — после «Рассчитать» откроется предварительный расчёт по фондам, затем можно подтвердить пополнение."
+      />
 
       <div className={styles.panel}>
         <AmountInput
@@ -92,7 +95,7 @@ export function TopupPage() {
 
         <div className={styles.row}>
           <Button variant="primary" onClick={onCalculate} disabled={calcMutation.isPending || !normalized}>
-            Рассчитать
+            {calcMutation.isPending ? "Считаем…" : "Рассчитать"}
           </Button>
           <Button variant="ghost" onClick={() => setAmount("")} disabled={calcMutation.isPending}>
             Сбросить
@@ -106,7 +109,8 @@ export function TopupPage() {
         ) : null}
 
         <p className={styles.hint}>
-          Расчёт выполняется на backend: учитываются лоты, цены из mock‑данных и ваша стратегия.
+          Сначала сервер посчитает распределение по лотам, ценам фондов и вашей стратегии. На следующем шаге вы сможете
+          проверить цифры и подтвердить пополнение — до подтверждения портфель не меняется.
         </p>
       </div>
     </div>

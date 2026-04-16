@@ -14,6 +14,10 @@ export function TopupItemCard({ item }: TopupItemCardProps) {
         <div>
           <p className={styles.title}>{item.category_name}</p>
           <p className={styles.sub}>{item.fund_name}</p>
+          <p className={styles.unitsLead}>
+            К покупке: <strong>{item.purchased_units}</strong> акций (лотов: {item.purchased_lots}, в лоте{" "}
+            {item.lot_size} шт.)
+          </p>
         </div>
         <span className={styles.ticker}>{item.ticker}</span>
       </div>

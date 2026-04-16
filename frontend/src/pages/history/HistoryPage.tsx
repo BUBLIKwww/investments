@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { getTopupHistory } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { EmptyState } from "@/shared/ui/EmptyState";
 import { ErrorBlock } from "@/shared/ui/ErrorBlock";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 import { LoadingBlock } from "@/shared/ui/LoadingBlock";
 import { PageHeader } from "@/shared/ui/PageHeader";
 import { getUserFacingApiError } from "@/shared/lib/api-error-message";
@@ -21,6 +23,9 @@ export function HistoryPage() {
     return (
       <div>
         <PageHeader title="История" subtitle="Сохранённые пополнения" />
+        <p className={styles.crossLink}>
+          <Link to="/transactions">Журнал сделок</Link>
+        </p>
         <LoadingBlock label="Загружаем историю…" />
       </div>
     );
@@ -31,6 +36,9 @@ export function HistoryPage() {
     return (
       <div>
         <PageHeader title="История" subtitle="Сохранённые пополнения" />
+        <p className={styles.crossLink}>
+          <Link to="/transactions">Журнал сделок</Link>
+        </p>
         <ErrorBlock title={err.title} message={err.message} onRetry={() => void q.refetch()} />
       </div>
     );
@@ -42,6 +50,9 @@ export function HistoryPage() {
     return (
       <div>
         <PageHeader title="История" subtitle="Сохранённые пополнения" />
+        <p className={styles.crossLink}>
+          <Link to="/transactions">Журнал сделок</Link>
+        </p>
         <EmptyState
           title="Пока нет пополнений"
           description="После сохранения пополнения оно появится в этом списке."
@@ -53,9 +64,12 @@ export function HistoryPage() {
   return (
     <div>
       <PageHeader title="История" subtitle="Сохранённые пополнения" />
+      <p className={styles.crossLink}>
+        <Link to="/transactions">Журнал сделок</Link>
+      </p>
       <div className={styles.list}>
         {rows.map((t) => (
-          <div key={t.id} className={styles.card}>
+          <GlassSurface key={t.id} variant="strong" className={styles.card}>
             <div className={styles.top}>
               <div>
                 <p className={styles.title}>{formatRub(t.total_amount)}</p>
@@ -73,7 +87,7 @@ export function HistoryPage() {
                 <p className={styles.v}>{formatRub(t.total_cash_remainder)}</p>
               </div>
             </div>
-          </div>
+          </GlassSurface>
         ))}
       </div>
     </div>
