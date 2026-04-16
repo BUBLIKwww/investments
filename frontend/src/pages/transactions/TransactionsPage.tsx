@@ -70,6 +70,7 @@ export function TransactionsPage() {
 
       {rows.length === 0 ? (
         <EmptyState
+          kicker="Журнал"
           title="Пока нет сделок"
           description="Добавьте покупку или продажу — позиции портфеля обновятся автоматически."
           actions={

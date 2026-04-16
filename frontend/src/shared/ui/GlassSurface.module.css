@@ -1,5 +1,6 @@
 .root {
   position: relative;
+  isolation: isolate;
   background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -8,6 +9,32 @@
   border-radius: var(--radius-glass);
 }
 
+.root::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.22) 0%, transparent 42%, transparent 100%);
+  opacity: 0.85;
+}
+
+.root > * {
+  position: relative;
+  z-index: 1;
+}
+
 .strong {
   background: var(--glass-fill-strong);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+}
+
+.elevated {
+  box-shadow: var(--glass-shadow), var(--shadow-hero-bloom), 0 0 0 1px var(--glass-stroke-outer);
+}
+
+html[data-theme="dark"] .elevated {
+  box-shadow: var(--glass-shadow), 0 0 40px rgba(77, 159, 255, 0.06), 0 0 0 1px var(--glass-stroke-outer);
 }

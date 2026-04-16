@@ -1,5 +1,5 @@
 .inner {
-  padding: 18px 18px;
+  padding: 20px 20px 19px;
 }
 
 .label {
@@ -12,13 +12,13 @@
 }
 
 .value {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   font-family: var(--font-money);
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
+  font-size: clamp(28px, 6vw, 32px);
+  font-weight: 620;
+  letter-spacing: -0.045em;
   line-height: 1.05;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
   color: var(--text);
 }
 

@@ -306,23 +306,23 @@
 }
 
 .switch input:checked + .slider {
-  background: rgba(37, 99, 235, 0.22);
-  border-color: rgba(37, 99, 235, 0.45);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .switch input:checked + .slider::before {
   transform: translateX(20px);
   opacity: 1;
-  background: rgb(37, 99, 235);
+  background: var(--accent);
 }
 
 html[data-theme="dark"] .switch input:checked + .slider {
-  background: rgba(96, 165, 250, 0.2);
-  border-color: rgba(96, 165, 250, 0.45);
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
 html[data-theme="dark"] .switch input:checked + .slider::before {
-  background: rgb(96, 165, 250);
+  background: var(--accent);
 }
 
 .emptyHint {

@@ -10,6 +10,7 @@ import { normalizeAmountForApi } from "@/shared/lib/format";
 import { AmountInput } from "@/shared/ui/AmountInput";
 import { Button } from "@/shared/ui/Button";
 import { ErrorBlock } from "@/shared/ui/ErrorBlock";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 import { ModeSelector } from "@/shared/ui/ModeSelector";
 import { PageHeader } from "@/shared/ui/PageHeader";
 
@@ -61,7 +62,7 @@ export function TopupPage() {
         subtitle="Введите сумму и режим — после «Рассчитать» откроется предварительный расчёт по фондам, затем можно подтвердить пополнение."
       />
 
-      <div className={styles.panel}>
+      <GlassSurface variant="strong" elevated className={styles.panel}>
         <AmountInput
           id="amount"
           label="Сумма, ₽"
@@ -112,7 +113,7 @@ export function TopupPage() {
           Сначала сервер посчитает распределение по лотам, ценам фондов и вашей стратегии. На следующем шаге вы сможете
           проверить цифры и подтвердить пополнение — до подтверждения портфель не меняется.
         </p>
-      </div>
+      </GlassSurface>
     </div>
   );
 }

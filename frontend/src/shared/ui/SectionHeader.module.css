@@ -8,18 +8,19 @@
 
 .title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-size: 24px;
+  font-weight: 660;
+  letter-spacing: -0.035em;
   color: var(--text);
 }
 
 .subtitle {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   font-size: 15px;
   font-weight: 500;
   color: var(--text-secondary);
-  line-height: 1.35;
+  line-height: 1.42;
+  letter-spacing: -0.012em;
 }
 
 .actions {

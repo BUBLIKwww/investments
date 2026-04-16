@@ -54,8 +54,19 @@ export function HistoryPage() {
           <Link to="/transactions">Журнал сделок</Link>
         </p>
         <EmptyState
+          kicker="История"
           title="Пока нет пополнений"
           description="После сохранения пополнения оно появится в этом списке."
+          actions={
+            <>
+              <Link className={styles.ctaPrimary} to="/topup">
+                Пополнить
+              </Link>
+              <Link className={styles.ctaGhost} to="/transactions">
+                Сделки
+              </Link>
+            </>
+          }
         />
       </div>
     );

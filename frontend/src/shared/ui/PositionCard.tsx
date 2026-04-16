@@ -18,7 +18,7 @@ export function PositionCard({ title, invested, currentWeightPercent, targetWeig
   const deltaCls = Number.isFinite(delta) ? (delta > 0 ? styles.deltaPos : delta < 0 ? styles.deltaNeg : "") : "";
 
   return (
-    <GlassSurface className={styles.inner}>
+    <GlassSurface variant="strong" className={styles.inner}>
       <div className={styles.top}>
         <p className={styles.name}>{title}</p>
         {badge ? <span className={styles.pill}>{badge}</span> : null}

@@ -1,11 +1,5 @@
 .panel {
-  background: var(--glass-fill-strong);
-  border: 1px solid var(--glass-stroke);
-  border-radius: var(--radius-glass);
-  box-shadow: var(--glass-shadow);
-  padding: 20px 18px;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 24px 20px 22px;
 }
 
 .chips {

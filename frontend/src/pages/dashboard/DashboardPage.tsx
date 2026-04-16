@@ -81,6 +81,8 @@ export function DashboardPage() {
     !Array.isArray(data.positions) ||
     data.positions.length === 0;
   const busyPrices = refreshMutation.isPending;
+  const totalCurrent = data?.total_current_amount ?? 0;
+  const totalInvested = data?.total_invested_amount ?? 0;
 
   return (
     <div>
@@ -95,15 +97,16 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      {!isEmpty ? (
-        <section className={styles.hero} aria-label="Ключевые показатели">
-          <GlassSurface variant="strong" className={styles.heroCard}>
-            <p className={styles.heroEyebrow}>Оценка портфеля</p>
-            <p className={styles.heroFigure}>{formatRub(data.total_current_amount)}</p>
-            <div className={styles.heroMeta}>Вложено {formatRub(data.total_invested_amount)}</div>
-          </GlassSurface>
-        </section>
-      ) : null}
+      <section className={styles.hero} aria-label="Ключевые показатели">
+        <GlassSurface variant="strong" elevated className={styles.heroCard}>
+          <p className={styles.heroEyebrow}>Оценка портфеля</p>
+          <p className={styles.heroFigure}>{formatRub(totalCurrent)}</p>
+          <div className={styles.heroMeta}>
+            Вложено {formatRub(totalInvested)}
+            {isEmpty ? <span className={styles.heroHint}> · добавьте сделку или пополнение</span> : null}
+          </div>
+        </GlassSurface>
+      </section>
 
       <div className={styles.toolbar}>
         <Button type="button" variant="secondary" size="sm" disabled={busyPrices} onClick={() => refreshMutation.mutate()}>
@@ -114,8 +117,20 @@ export function DashboardPage() {
 
       {isEmpty ? (
         <EmptyState
+          kicker="Старт"
           title="Портфель пока пустой"
           description="Пополните счёт или занесите покупку в журнал сделок — позиции пересчитаются автоматически."
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path
+                d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z"
+                stroke="currentColor"
+                strokeWidth="1.65"
+              />
+              <path d="M4 10h16" stroke="currentColor" strokeWidth="1.65" />
+              <circle cx="16.5" cy="13.5" r="1.25" fill="currentColor" />
+            </svg>
+          }
           actions={
             <>
               <Link className={styles.pillLink} to="/topup">
@@ -133,10 +148,10 @@ export function DashboardPage() {
       ) : (
         <>
           <div className={styles.summaryGrid}>
-            <SummaryCard label="Вложено" value={formatRub(data.total_invested_amount)} hint="Сумма покупок по позициям" />
+            <SummaryCard label="Вложено" value={formatRub(totalInvested)} hint="Сумма покупок по позициям" />
             <SummaryCard
               label="Текущая оценка"
-              value={formatRub(data.total_current_amount)}
+              value={formatRub(totalCurrent)}
               hint="По ценам фондов на сервере"
             />
           </div>
@@ -169,7 +184,7 @@ export function DashboardPage() {
           <SectionHeader title="Позиции" subtitle="Фонды в портфеле" />
           <div className={styles.grid}>
             {data.positions.map((p) => (
-              <GlassSurface key={p.id} className={styles.positionCard}>
+              <GlassSurface key={p.id} variant="strong" className={styles.positionCard}>
                 <div className={styles.posTop}>
                   <div>
                     <p className={styles.posTitle}>{p.fund.name}</p>

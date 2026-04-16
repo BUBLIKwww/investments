@@ -110,6 +110,7 @@ export function CalculationPage() {
         <div>
           <PageHeader title="Расчёт пополнения" subtitle="Нет сохранённого результата" />
           <EmptyState
+            kicker="Пополнение"
             title="Сначала сделайте расчёт"
             description="Мы не нашли последний расчёт в памяти приложения. Вернитесь к вводу суммы и нажмите «Рассчитать»."
             actions={
