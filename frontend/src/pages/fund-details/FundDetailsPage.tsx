@@ -7,6 +7,7 @@ import { getFundById } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import { formatDateTime, formatRub } from "@/shared/lib/format";
 import { ErrorBlock } from "@/shared/ui/ErrorBlock";
+import { GlassSurface } from "@/shared/ui/GlassSurface";
 import { LoadingBlock } from "@/shared/ui/LoadingBlock";
 import { PageHeader } from "@/shared/ui/PageHeader";
 
@@ -79,7 +80,7 @@ export function FundDetailsPage() {
     <div>
       <PageHeader title={f.name} subtitle={`Тикер ${f.ticker}`} />
 
-      <div className={styles.hero}>
+      <GlassSurface variant="strong" elevated className={styles.hero}>
         <div className={styles.heroTop}>
           <div>
             <p className={styles.priceLabel}>Текущая цена</p>
@@ -91,7 +92,7 @@ export function FundDetailsPage() {
           </span>
         </div>
         <p className={styles.updated}>Обновление цены: {formatDateTime(f.last_price_updated_at)}</p>
-      </div>
+      </GlassSurface>
 
       <div className={styles.grid}>
         <div className={styles.kpi}>

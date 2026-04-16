@@ -28,8 +28,8 @@ function resolveScheme(mode: ThemeMode): "light" | "dark" {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<ThemeMode>("system");
-  const [resolved, setResolved] = useState<"light" | "dark">(() => resolveScheme("system"));
+  const [mode, setModeState] = useState<ThemeMode>("dark");
+  const [resolved, setResolved] = useState<"light" | "dark">(() => resolveScheme("dark"));
 
   const applyDomTheme = useCallback((scheme: "light" | "dark") => {
     document.documentElement.dataset.theme = scheme;
