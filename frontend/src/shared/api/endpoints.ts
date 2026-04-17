@@ -200,7 +200,7 @@ export async function getFunds(): Promise<FundRead[]> {
 
 export async function searchFunds(query: string, limit = 15): Promise<FundSearchHit[]> {
   const params = new URLSearchParams({ query, limit: String(limit) });
-  return apiRequest<FundSearchHit[]>(`/api/v1/funds/search?${params.toString()}`);
+  return apiRequest<FundSearchHit[]>(`/api/v1/funds/find-instruments?${params.toString()}`);
 }
 
 export async function addFund(payload: FundAddPayload): Promise<FundRead> {
@@ -218,7 +218,7 @@ export async function refreshFundPrices(): Promise<FundsPricesRefreshResponse> {
 }
 
 export async function getFundById(fundId: number): Promise<FundRead> {
-  return apiRequest<FundRead>(`/api/v1/funds/${fundId}`);
+  return apiRequest<FundRead>(`/api/v1/funds/by-id/${fundId}`);
 }
 
 export async function listTransactions(): Promise<InvestmentTransactionRead[]> {

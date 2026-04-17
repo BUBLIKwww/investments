@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.domain.money import q_money, to_decimal
+from app.domain.money import q_money, q_price, to_decimal
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.strategy_repository import StrategyRepository
 from app.schemas.rebalance import RebalanceCategoryRead, RebalanceRead
@@ -26,7 +26,7 @@ class RebalanceService:
             if p.fund is None:
                 continue
             ticker_by_fund[int(p.fund.id)] = p.fund.ticker
-            unit = q_money(self._pricing.get_unit_price(p.fund))
+            unit = q_price(self._pricing.get_unit_price(p.fund))
             cur = q_money(Decimal(int(p.total_units)) * unit)
             cid = int(p.category_id)
             current_by_category[cid] = current_by_category.get(cid, Decimal("0")) + cur

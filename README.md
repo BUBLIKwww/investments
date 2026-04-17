@@ -37,7 +37,8 @@ PYTHONPATH=. python -m app.scripts.seed
 - `GET /api/v1/users/me` — mock‑пользователь (через `get_current_user()`).
 - `GET /api/v1/strategy`, `PUT /api/v1/strategy` — категории стратегии с привязкой к фонду, валидация суммы процентов активных категорий = 100.
 - `GET /api/v1/funds`, `GET /api/v1/funds/{fund_id}` — список активных инструментов в БД и карточка.
-- `GET /api/v1/funds/search?query=...` — поиск инструментов в T‑Invest (**FindInstrument** + метаданные и last price).
+- `GET /api/v1/funds/find-instruments?query=...` — поиск инструментов в T‑Invest (**FindInstrument** + метаданные и last price). Алиас: `GET /api/v1/funds/search?...` (во избежание конфликта с `/{fund_id}` клиенты используют `find-instruments`).
+- `GET /api/v1/funds/by-id/{fund_id}` — карточка фонда (предпочтительно вместо `/funds/{id}`).
 - `POST /api/v1/funds/add` — добавить инструмент в каталог (проверка по `instrument_uid`, цена через **GetLastPrices**).
 - `POST /api/v1/funds/refresh-prices` — обновление **last price** только по инструментам с заполненным **`instrument_uid`** (**GetLastPrices**).
 - `GET /api/v1/portfolio` — инвестировано, текущая оценка по ценам из БД, сводка по категориям, позиции.

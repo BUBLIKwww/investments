@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from sqlalchemy.orm import Session
 
-from app.domain.money import q_money, to_decimal
+from app.domain.money import q_money, q_price, to_decimal
 from app.models.portfolio_position import PortfolioPosition
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.strategy_repository import StrategyRepository
@@ -77,7 +77,8 @@ class PortfolioService:
         current_by_position: dict[int, Decimal] = {}
         total_current = Decimal("0")
         for p in positions:
-            unit = q_money(self._pricing.get_unit_price(p.fund))
+            # Цена за шт. — q_price (микрошаг); q_money округляет до копеек и может обнулить мелкую цену → падение Pydantic current_price>0 и пустой портфель.
+            unit = q_price(self._pricing.get_unit_price(p.fund))
             cur = q_money(Decimal(int(p.total_units)) * unit)
             current_by_position[int(p.id)] = cur
             total_current += cur
@@ -115,7 +116,7 @@ class PortfolioService:
             cur_w = Decimal("0")
             if total_current > 0:
                 cur_w = q_money(cur_amt / total_current * Decimal("100"))
-            unit = q_money(self._pricing.get_unit_price(p.fund))
+            unit = q_price(self._pricing.get_unit_price(p.fund))
             inv = to_decimal(p.invested_amount)
             pnl = q_money(cur_amt - inv)
             total_pnl += pnl
