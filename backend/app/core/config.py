@@ -36,5 +36,10 @@ class Settings(BaseSettings):
             return "sqlite:///./data/dev.db"
         return normalize_database_url(str(v).strip())
 
+    # T-Invest (production Invest API). Токен: https://www.tbank.ru/invest/settings/api/
+    TINVEST_TOKEN: str = ""
+    # false = боевой контур INVEST_GRPC_API (реальные рынки). true только для локальных тестов песочницы.
+    TINVEST_USE_SANDBOX: bool = False
+
 
 settings = Settings()

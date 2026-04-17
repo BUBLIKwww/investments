@@ -179,3 +179,73 @@ html[data-theme="dark"] .textarea:focus-visible {
   line-height: 1.45;
   font-weight: 500;
 }
+
+.fundSearchWrap {
+  position: relative;
+}
+
+.searchDropdown {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  max-height: 280px;
+  overflow: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-stroke);
+  background: var(--glass-fill);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-drop);
+}
+
+.searchDropdownItem {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--glass-stroke);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.searchDropdownItem:last-child {
+  border-bottom: 0;
+}
+
+.searchDropdownItem:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.searchDropdownItem:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.searchDropdownRowMuted {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.searchHitTitle {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.searchHitTicker {
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.searchHitMeta {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

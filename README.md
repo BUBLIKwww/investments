@@ -4,7 +4,7 @@
 
 ## Статус по частям
 
-- **`backend/`**: рабочий **MVP** — модели, миграции, репозитории, сервисы, расчёт пополнения (режимы `strict` / `maximize` / `smart`), портфель, стратегия, rebalance, mock‑ценник через `Fund.price` (архитектурно выделен `PricingProvider`).
+- **`backend/`**: рабочий **MVP** — модели, миграции, репозитории, сервисы, расчёт пополнения (режимы `strict` / `maximize` / `smart`), портфель, стратегия, rebalance. Каталог инструментов и **last price** подтягиваются из **T‑Invest Invest API** (боевой контур по умолчанию); `Fund.price` в БД — последняя известная котировка (см. `TINVEST_*` в `.env.example`).
 - **`bot/`** и **`frontend/`**: по‑прежнему стартовый каркас (без доработок в рамках текущего этапа).
 
 ## Backend: быстрый старт
@@ -20,7 +20,9 @@ PYTHONPATH=. alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-При старте приложения выполняется **автосид**: если таблица `funds` пустая, создаются mock‑фонды, mock‑пользователь и стратегия по умолчанию (40/25/20/15).
+При старте выполняется **автосид**: удаляются старые демо‑инструменты (`figi_or_uid` вида `mock-*` и связанные строки) и создаётся mock‑пользователь для Telegram‑флоу. **Каталог инструментов не заполняется автоматически**: инструменты ищутся через **`GET /api/v1/funds/search?query=...`** (T‑Invest **FindInstrument**) и добавляются в БД через **`POST /api/v1/funds/add`** (например, из формы новой сделки во фронтенде).
+
+После обновления кода выполните **`alembic upgrade head`** (новые поля `instrument_uid`, `figi` у `funds`).
 
 Отдельно (например, в CI) можно вызвать:
 
@@ -34,8 +36,11 @@ PYTHONPATH=. python -m app.scripts.seed
 
 - `GET /api/v1/users/me` — mock‑пользователь (через `get_current_user()`).
 - `GET /api/v1/strategy`, `PUT /api/v1/strategy` — категории стратегии с привязкой к фонду, валидация суммы процентов активных категорий = 100.
-- `GET /api/v1/funds`, `GET /api/v1/funds/{fund_id}` — список активных фондов и карточка.
-- `GET /api/v1/portfolio` — инвестировано, текущая оценка по mock‑цене, сводка по категориям, позиции.
+- `GET /api/v1/funds`, `GET /api/v1/funds/{fund_id}` — список активных инструментов в БД и карточка.
+- `GET /api/v1/funds/search?query=...` — поиск инструментов в T‑Invest (**FindInstrument** + метаданные и last price).
+- `POST /api/v1/funds/add` — добавить инструмент в каталог (проверка по `instrument_uid`, цена через **GetLastPrices**).
+- `POST /api/v1/funds/refresh-prices` — обновление **last price** только по инструментам с заполненным **`instrument_uid`** (**GetLastPrices**).
+- `GET /api/v1/portfolio` — инвестировано, текущая оценка по ценам из БД, сводка по категориям, позиции.
 - `POST /api/v1/topups/calculate` — расчёт пополнения без сохранения.
 - `POST /api/v1/topups` — пересчёт + сохранение истории + обновление позиций.
 - `GET /api/v1/topups/history` — история пополнений.

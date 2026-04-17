@@ -5,6 +5,8 @@ export type FundRead = {
   name: string;
   ticker: string;
   figi_or_uid: string;
+  instrument_uid?: string | null;
+  figi?: string | null;
   lot: number;
   price: string;
   currency: string;
@@ -15,6 +17,25 @@ export type FundRead = {
 export type FundsPricesRefreshResponse = {
   updated: number;
   funds: FundRead[];
+};
+
+export type FundSearchHit = {
+  name: string;
+  ticker: string;
+  instrument_uid: string;
+  figi: string | null;
+  lot: number;
+  currency: string;
+  last_price: string | null;
+};
+
+export type FundAddPayload = {
+  instrument_uid: string;
+  ticker: string;
+  name: string;
+  figi: string | null;
+  lot: number;
+  currency: string;
 };
 
 export type CategorySummary = {
@@ -133,7 +154,7 @@ export type StrategyRead = {
 };
 
 export type StrategyCategoryUpdatePayload = {
-  id: number;
+  id: number | null;
   name: string;
   target_percent: string;
   fund_id: number;

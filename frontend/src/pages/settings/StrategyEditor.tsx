@@ -17,7 +17,7 @@ import { FundPickerModal } from "@/widgets/fund-picker/FundPickerModal";
 import styles from "./SettingsPage.module.css";
 
 export type StrategyCategoryFormRow = {
-  id: number;
+  id: number | null;
   name: string;
   target_percent: string;
   fund_id: number;
@@ -46,7 +46,7 @@ function buildUpdatePayload(rows: StrategyCategoryFormRow[]): StrategyUpdateRequ
   const sorted = [...rows].sort((a, b) => a.sort_order - b.sort_order);
   return {
     categories: sorted.map((r) => ({
-      id: r.id,
+      id: r.id === null ? null : r.id,
       name: r.name.trim(),
       target_percent: normalizePercentForSave(r.target_percent),
       fund_id: r.fund_id,
@@ -62,9 +62,12 @@ function validate(rows: StrategyCategoryFormRow[]): { ok: boolean; messages: str
   let activeSum = 0;
 
   for (const r of rows) {
-    const label = r.name.trim() || `категория #${r.id}`;
+    const label = r.name.trim() || `категория #${r.id ?? "новая"}`;
     if (!r.name.trim()) {
       messages.push("Укажите название для каждой категории.");
+    }
+    if (!r.fund_id || r.fund_id <= 0) {
+      messages.push(`«${label}»: выберите фонд.`);
     }
     const p = parseDecimal(r.target_percent);
     if (!Number.isFinite(p)) {
@@ -218,12 +221,12 @@ export function StrategyEditor() {
         </div>
 
         {rows.length === 0 ? (
-          <p className={styles.emptyHint}>Категории стратегии не найдены.</p>
+          <p className={styles.emptyHint}>Категории стратегии не заданы. Добавьте категории и привяжите к инструментам из каталога (сначала добавьте инструмент через сделку или обновите список фондов).</p>
         ) : (
           rows.map((row, index) => {
             const fund = fundById.get(row.fund_id);
             return (
-              <article key={row.id} className={styles.categoryCard}>
+              <article key={row.id ?? `new-${index}-${row.sort_order}`} className={styles.categoryCard}>
                 <div className={styles.categoryHead}>
                   <p className={styles.categoryTitle}>Категория</p>
                 </div>
@@ -315,6 +318,29 @@ export function StrategyEditor() {
 
         <div className={styles.saveBar}>
           <div className={styles.saveBarInner}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={formLocked || (fundsQuery.data?.length ?? 0) === 0}
+              onClick={() => {
+                const first = fundsQuery.data?.[0];
+                if (!first) return;
+                setDirty(true);
+                setRows((prev) => [
+                  ...prev,
+                  {
+                    id: null,
+                    name: "Новая категория",
+                    target_percent: "0.0000",
+                    fund_id: first.id,
+                    sort_order: prev.length + 1,
+                    is_active: true,
+                  },
+                ]);
+              }}
+            >
+              Добавить категорию
+            </Button>
             <Button type="button" variant="primary" disabled={!canSave || saveMutation.isPending} onClick={handleSave}>
               {saveMutation.isPending ? "Сохранение…" : "Сохранить стратегию"}
             </Button>

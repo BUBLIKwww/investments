@@ -6,3 +6,4 @@ alembic>=1.13,<2
 pydantic>=2,<3
 pydantic-settings>=2,<3
 python-dotenv>=1.0,<2
+tinkoff-investments>=0.2.0b108,<0.3

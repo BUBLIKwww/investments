@@ -55,7 +55,7 @@ export function RebalancePage() {
 
   return (
     <div>
-      <PageHeader title="Ребаланс" subtitle="Текущие и целевые доли по mock‑ценам" />
+      <PageHeader title="Ребаланс" subtitle="Текущие и целевые доли по рыночным ценам из каталога" />
 
       <SectionHeader title="Сводка" subtitle="Категории ниже цели / выше цели" />
 

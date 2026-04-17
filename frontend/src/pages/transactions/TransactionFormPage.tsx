@@ -1,16 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useMatch, useNavigate, useParams } from "react-router-dom";
 
 import {
+  addFund,
   createTransaction,
   deleteTransaction,
   getFunds,
   getTransaction,
+  searchFunds,
   updateTransaction,
 } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
-import type { TransactionOperationType, InvestmentTransactionWritePayload } from "@/shared/api/types";
+import type { FundSearchHit, TransactionOperationType, InvestmentTransactionWritePayload } from "@/shared/api/types";
 import { getUserFacingApiError } from "@/shared/lib/api-error-message";
 import { formatRub, normalizeAmountForApi, parseDecimal } from "@/shared/lib/format";
 import { AmountInput } from "@/shared/ui/AmountInput";
@@ -42,7 +44,11 @@ export function TransactionFormPage() {
   const { transactionId } = useParams();
   const editId = isCreate ? null : Number(transactionId);
 
-  const fundsQ = useQuery({ queryKey: queryKeys.funds, queryFn: getFunds });
+  const fundsQ = useQuery({
+    queryKey: queryKeys.funds,
+    queryFn: getFunds,
+    enabled: !isCreate,
+  });
   const txQ = useQuery({
     queryKey: [...queryKeys.transactions, "detail", editId],
     queryFn: () => getTransaction(editId as number),
@@ -51,6 +57,23 @@ export function TransactionFormPage() {
 
   const activeFunds = useMemo(() => (fundsQ.data ?? []).filter((f) => f.is_active), [fundsQ.data]);
 
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  const searchQ = useQuery({
+    queryKey: queryKeys.fundsSearch(debouncedSearch),
+    queryFn: () => searchFunds(debouncedSearch, 15),
+    enabled: isCreate && debouncedSearch.length >= 2,
+    staleTime: 30_000,
+  });
+
   const [fundId, setFundId] = useState<number | null>(null);
   const [operation, setOperation] = useState<TransactionOperationType>("buy");
   const [quantity, setQuantity] = useState(1);
@@ -58,18 +81,6 @@ export function TransactionFormPage() {
   const [executedLocal, setExecutedLocal] = useState(defaultExecutedLocal);
   const [note, setNote] = useState("");
   const [banner, setBanner] = useState<{ variant: "success" | "error"; title: string; message: string } | null>(null);
-
-  useEffect(() => {
-    if (!isCreate || activeFunds.length === 0 || fundId !== null) return;
-    setFundId(activeFunds[0].id);
-    setPriceStr(String(activeFunds[0].price));
-  }, [isCreate, activeFunds, fundId]);
-
-  useEffect(() => {
-    if (!isCreate || fundId == null) return;
-    const f = activeFunds.find((x) => x.id === fundId);
-    if (f) setPriceStr(String(f.price));
-  }, [fundId, isCreate, activeFunds]);
 
   useEffect(() => {
     const row = txQ.data;
@@ -81,6 +92,44 @@ export function TransactionFormPage() {
     setNote(row.note ?? "");
     setExecutedLocal(toDatetimeLocalValue(row.executed_at));
   }, [txQ.data, isCreate]);
+
+  useEffect(() => {
+    if (!isCreate || !dropdownOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      const el = searchWrapRef.current;
+      if (!el || el.contains(e.target as Node)) return;
+      setDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [isCreate, dropdownOpen]);
+
+  const addFundMutation = useMutation({
+    mutationFn: addFund,
+    onSuccess: async (fund) => {
+      setFundId(fund.id);
+      setPriceStr(String(fund.price));
+      setDropdownOpen(false);
+      setSearchInput(`${fund.name} (${fund.ticker})`);
+      await qc.invalidateQueries({ queryKey: queryKeys.funds });
+    },
+    onError: (err: unknown) => {
+      const e = getUserFacingApiError(err);
+      setBanner({ variant: "error", title: e.title, message: e.message });
+    },
+  });
+
+  const onPickSearchHit = (hit: FundSearchHit) => {
+    setBanner(null);
+    addFundMutation.mutate({
+      instrument_uid: hit.instrument_uid,
+      ticker: hit.ticker,
+      name: hit.name,
+      figi: hit.figi,
+      lot: hit.lot,
+      currency: hit.currency,
+    });
+  };
 
   const totalPreview = useMemo(() => {
     const p = parseDecimal(priceStr);
@@ -157,7 +206,7 @@ export function TransactionFormPage() {
     return () => window.clearTimeout(t);
   }, [banner]);
 
-  if (fundsQ.isPending || (!isCreate && txQ.isPending)) {
+  if ((!isCreate && fundsQ.isPending) || (!isCreate && txQ.isPending)) {
     return (
       <div>
         <PageHeader title={isCreate ? "Новая сделка" : "Сделка"} subtitle="Загрузка…" />
@@ -166,7 +215,7 @@ export function TransactionFormPage() {
     );
   }
 
-  if (fundsQ.isError) {
+  if (!isCreate && fundsQ.isError) {
     const e = getUserFacingApiError(fundsQ.error);
     return (
       <div>
@@ -195,7 +244,7 @@ export function TransactionFormPage() {
     );
   }
 
-  const busy = saveMutation.isPending || deleteMutation.isPending;
+  const busy = saveMutation.isPending || deleteMutation.isPending || addFundMutation.isPending;
 
   const onDelete = () => {
     if (!window.confirm("Удалить эту сделку? Позиции портфеля будут пересчитаны.")) return;
@@ -228,25 +277,94 @@ export function TransactionFormPage() {
 
       <GlassSurface variant="strong" className={styles.formShell}>
         <form className={styles.form} onSubmit={onSubmit}>
-        <div className={styles.selectWrap}>
-          <span className={styles.label}>Фонд</span>
-          <select
-            className={styles.select}
-            value={fundId ?? ""}
-            disabled={busy}
-            onChange={(e) => setFundId(Number(e.target.value))}
-            required
-          >
-            <option value="" disabled>
-              {activeFunds.length ? "Выберите фонд" : "Нет активных фондов"}
-            </option>
-            {activeFunds.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name} ({f.ticker})
+        {isCreate ? (
+          <div className={styles.selectWrap} ref={searchWrapRef}>
+            <label className={styles.label} htmlFor="tx-fund-search">
+              Инструмент
+            </label>
+            <div className={styles.fundSearchWrap}>
+              <input
+                id="tx-fund-search"
+                className={styles.select}
+                type="search"
+                autoComplete="off"
+                placeholder="Поиск по названию или тикеру (от 2 символов)"
+                value={searchInput}
+                disabled={busy}
+                onFocus={() => setDropdownOpen(true)}
+                onChange={(e) => {
+                  setSearchInput(e.target.value);
+                  setDropdownOpen(true);
+                  if (fundId !== null) {
+                    setFundId(null);
+                    setPriceStr("");
+                  }
+                }}
+              />
+              {dropdownOpen && debouncedSearch.length >= 2 ? (
+                <div className={styles.searchDropdown} role="listbox">
+                  {searchQ.isPending ? (
+                    <div className={styles.searchDropdownRowMuted}>Поиск…</div>
+                  ) : searchQ.isError ? (
+                    <div className={styles.searchDropdownRowMuted}>
+                      {getUserFacingApiError(searchQ.error).message}
+                    </div>
+                  ) : (searchQ.data?.length ?? 0) === 0 ? (
+                    <div className={styles.searchDropdownRowMuted}>Ничего не найдено</div>
+                  ) : (
+                    searchQ.data!.map((hit) => (
+                      <button
+                        key={hit.instrument_uid}
+                        type="button"
+                        className={styles.searchDropdownItem}
+                        disabled={busy}
+                        onClick={() => onPickSearchHit(hit)}
+                      >
+                        <span className={styles.searchHitTitle}>
+                          {hit.name} <span className={styles.searchHitTicker}>{hit.ticker}</span>
+                        </span>
+                        <span className={styles.searchHitMeta}>
+                          {hit.currency}
+                          {hit.last_price != null ? ` · ${hit.last_price}` : ""}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+            {fundId != null ? (
+              <p className={styles.hint}>Инструмент добавлен в каталог (#{fundId}). При необходимости измените цену ниже.</p>
+            ) : (
+              <p className={styles.hint}>Результаты из T‑Invest (FindInstrument). Выберите строку — инструмент сохранится в каталог и подтянется актуальная цена.</p>
+            )}
+          </div>
+        ) : (
+          <div className={styles.selectWrap}>
+            <span className={styles.label}>Фонд</span>
+            <select
+              className={styles.select}
+              value={fundId ?? ""}
+              disabled={busy}
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                setFundId(id);
+                const f = activeFunds.find((x) => x.id === id);
+                if (f) setPriceStr(String(f.price));
+              }}
+              required
+            >
+              <option value="" disabled>
+                {activeFunds.length ? "Выберите фонд" : "Нет активных фондов"}
               </option>
-            ))}
-          </select>
-        </div>
+              {activeFunds.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.ticker})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className={styles.segment}>
           <span className={styles.label}>Операция</span>

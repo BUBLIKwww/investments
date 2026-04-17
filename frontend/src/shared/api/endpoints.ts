@@ -1,6 +1,8 @@
 import { apiRequest } from "@/shared/api/client";
 import type {
+  FundAddPayload,
   FundRead,
+  FundSearchHit,
   FundsPricesRefreshResponse,
   InvestmentTransactionRead,
   InvestmentTransactionWritePayload,
@@ -73,6 +75,18 @@ export async function updateStrategy(payload: StrategyUpdateRequest): Promise<St
 
 export async function getFunds(): Promise<FundRead[]> {
   return apiRequest<FundRead[]>("/api/v1/funds");
+}
+
+export async function searchFunds(query: string, limit = 15): Promise<FundSearchHit[]> {
+  const params = new URLSearchParams({ query, limit: String(limit) });
+  return apiRequest<FundSearchHit[]>(`/api/v1/funds/search?${params.toString()}`);
+}
+
+export async function addFund(payload: FundAddPayload): Promise<FundRead> {
+  return apiRequest<FundRead>("/api/v1/funds/add", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function refreshFundPrices(): Promise<FundsPricesRefreshResponse> {

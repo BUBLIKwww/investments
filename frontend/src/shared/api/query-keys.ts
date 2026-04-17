@@ -5,6 +5,7 @@ export const queryKeys = {
   rebalance: ["rebalance"] as const,
   strategy: ["strategy"] as const,
   funds: ["funds"] as const,
+  fundsSearch: (q: string) => ["funds", "search", q] as const,
   fundDetail: (fundId: number) => ["funds", "detail", fundId] as const,
   topupCalculation: ["topup", "calculation"] as const,
 } as const;

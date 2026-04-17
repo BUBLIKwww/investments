@@ -20,7 +20,10 @@ class Fund(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255))
     ticker: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    figi_or_uid: Mapped[str] = mapped_column(String(64), index=True)
+    # Историческое поле: дублирует instrument_uid для обратной совместимости API (GetLastPrices).
+    figi_or_uid: Mapped[str] = mapped_column(String(128), index=True)
+    instrument_uid: Mapped[str | None] = mapped_column(String(128), unique=True, index=True, nullable=True)
+    figi: Mapped[str | None] = mapped_column(String(64), nullable=True)
     lot: Mapped[int] = mapped_column(Integer, nullable=False)
     price: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False, server_default="RUB")

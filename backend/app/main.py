@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        SeedService(db).ensure_seeded()
+        SeedService(db, settings).ensure_seeded()
         PortfolioRecalculationService(db).rebuild_positions_for_all_users()
         db.commit()
     finally:

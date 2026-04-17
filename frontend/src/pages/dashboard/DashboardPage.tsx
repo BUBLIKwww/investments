@@ -112,7 +112,9 @@ export function DashboardPage() {
         <Button type="button" variant="secondary" size="sm" disabled={busyPrices} onClick={() => refreshMutation.mutate()}>
           {busyPrices ? "Обновление цен…" : "Обновить цены"}
         </Button>
-        <p className={styles.toolbarHint}>Демо: случайное изменение цены каждого активного фонда на ±1–5%.</p>
+        <p className={styles.toolbarHint}>
+          Котировки обновляются через T‑Invest API (last price). Убедитесь, что на сервере задан TINVEST_TOKEN.
+        </p>
       </div>
 
       {isEmpty ? (

@@ -11,6 +11,8 @@ class FundRead(BaseModel):
     name: str
     ticker: str
     figi_or_uid: str
+    instrument_uid: str | None = None
+    figi: str | None = None
     lot: int = Field(ge=1)
     price: Decimal = Field(gt=0)
     currency: str
@@ -21,3 +23,22 @@ class FundRead(BaseModel):
 class FundsPricesRefreshResponse(BaseModel):
     updated: int
     funds: list[FundRead]
+
+
+class FundSearchResult(BaseModel):
+    name: str
+    ticker: str
+    instrument_uid: str
+    figi: str | None = None
+    lot: int = Field(ge=1)
+    currency: str
+    last_price: Decimal | None = None
+
+
+class FundAddRequest(BaseModel):
+    instrument_uid: str
+    ticker: str
+    name: str
+    figi: str | None = None
+    lot: int = Field(ge=1)
+    currency: str
