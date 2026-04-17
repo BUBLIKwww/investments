@@ -9,6 +9,10 @@ class RebalancePreviewRequest(BaseModel):
         default=None,
         description="Макс. доля кэша для сдвига к целям; null — весь доступный баланс",
     )
+    mode: Literal["simulation", "live"] = Field(
+        default="simulation",
+        description="simulation — внутренний журнал; live — котировки и кэш с реального счёта T‑Invest",
+    )
 
 
 class RebalanceActionRead(BaseModel):
@@ -16,6 +20,9 @@ class RebalanceActionRead(BaseModel):
     ticker: str
     action: Literal["buy", "sell"]
     amount: Decimal = Field(description="Сумма сделки в валюте портфеля (руб.)", ge=0)
+    quantity: int = Field(default=0, ge=0, description="Количество бумаг (штук)")
+    lots: int = Field(default=0, ge=0, description="Количество лотов")
+    instrument_id: str = Field(default="", description="instrument_uid или figi для PostOrder")
 
 
 class RebalanceInstrumentPreview(BaseModel):
@@ -47,6 +54,9 @@ class RebalancePreviewResponse(BaseModel):
         default_factory=list,
         description="По каждой активной категории стратегии: текущая / целевая / после плана доля капитала, %",
     )
+    mode: Literal["simulation", "live"] = "simulation"
+    plan_fingerprint: str = Field(description="SHA256 нормализованного плана; нужен для execute-live")
+    account_id: str | None = Field(default=None, description="Счёт T‑Invest для live; в simulation = null")
 
 
 class RebalanceExecuteRequest(BaseModel):
@@ -55,3 +65,26 @@ class RebalanceExecuteRequest(BaseModel):
 
 class RebalanceExecuteResponse(BaseModel):
     created_transaction_ids: list[int]
+
+
+class RebalanceLiveExecuteRequest(BaseModel):
+    amount: Decimal | None = Field(default=None, description="Должно совпадать с последним live preview")
+    plan_fingerprint: str = Field(description="Из ответа preview (mode=live)")
+    confirm: bool = Field(default=False, description="Обязательно true для реальных заявок")
+    dry_run: bool = Field(default=False, description="Проверить план и fingerprint без PostOrder")
+
+
+class RebalanceLiveOrderResult(BaseModel):
+    ticker: str
+    action: Literal["buy", "sell"]
+    instrument_id: str
+    lots: int
+    success: bool
+    order_id: str | None = None
+    execution_status: str | None = None
+    message: str | None = None
+
+
+class RebalanceLiveExecuteResponse(BaseModel):
+    orders: list[RebalanceLiveOrderResult]
+    dry_run: bool = False

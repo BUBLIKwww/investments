@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     TINVEST_TOKEN: str = ""
     # false = боевой контур INVEST_GRPC_API (реальные рынки). true только для локальных тестов песочницы.
     TINVEST_USE_SANDBOX: bool = False
+    # Если в БД не выбран счёт (broker_settings), подставляется этот account_id из .env
+    TINVEST_DEFAULT_ACCOUNT_ID: str = ""
 
 
 settings = Settings()

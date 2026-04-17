@@ -1,8 +1,8 @@
 export const queryKeys = {
-  portfolio: ["portfolio"] as const,
+  portfolio: (source: "simulation" | "live" = "live") => ["portfolio", source] as const,
   transactions: ["transactions"] as const,
   topupHistory: ["topupHistory"] as const,
-  rebalance: ["rebalance"] as const,
+  rebalance: (source: "simulation" | "live" = "live") => ["rebalance", source] as const,
   strategy: ["strategy"] as const,
   funds: ["funds"] as const,
   fundsSearch: (q: string) => ["funds", "search", q] as const,

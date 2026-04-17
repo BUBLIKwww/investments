@@ -26,8 +26,8 @@ export function DashboardPage() {
   );
 
   const portfolioQuery = useQuery({
-    queryKey: queryKeys.portfolio,
-    queryFn: getPortfolio,
+    queryKey: queryKeys.portfolio("live"),
+    queryFn: () => getPortfolio("live"),
   });
 
   const refreshMutation = useMutation({
@@ -39,8 +39,8 @@ export function DashboardPage() {
         message: `Обновлено инструментов: ${data.updated}. Пересчитываем портфель и ребаланс…`,
       });
       await Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.portfolio }),
-        qc.invalidateQueries({ queryKey: queryKeys.rebalance }),
+        qc.invalidateQueries({ queryKey: ["portfolio"] }),
+        qc.invalidateQueries({ queryKey: ["rebalance"] }),
         qc.invalidateQueries({ queryKey: queryKeys.funds }),
       ]);
     },
@@ -93,7 +93,13 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="Портфель"
-        subtitle={isEmpty ? "Начните с пополнения или добавьте сделку вручную" : "Сводка по стратегии и рынку"}
+        subtitle={
+          isEmpty
+            ? "Начните с пополнения или добавьте сделку вручную"
+            : data?.source === "live"
+              ? "Позиции с брокерского счёта T‑Invest; категории — по вашей стратегии в приложении"
+              : "Сводка по журналу приложения (симуляция)"
+        }
       />
 
       {priceBanner ? (

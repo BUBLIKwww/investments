@@ -42,6 +42,13 @@ class FundRepository:
         stmt = select(Fund).where(Fund.instrument_uid == uid).limit(1)
         return self._db.execute(stmt).scalar_one_or_none()
 
+    def get_by_figi(self, figi: str) -> Fund | None:
+        fg = figi.strip()
+        if not fg:
+            return None
+        stmt = select(Fund).where(Fund.figi == fg).limit(1)
+        return self._db.execute(stmt).scalar_one_or_none()
+
     def upsert_from_tinvest(
         self,
         *,

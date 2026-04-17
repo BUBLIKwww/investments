@@ -1,15 +1,20 @@
-"""План ребаланса с учётом денежного баланса (без реальных заявок T‑Invest)."""
+"""План ребаланса: симуляция по журналу или live по счёту T‑Invest."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import ROUND_FLOOR, Decimal
+from typing import Literal
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.enums import TransactionOperationType
 from app.domain.money import q_money, q_price, to_decimal
 from app.repositories.cash_repository import CashRepository
@@ -20,10 +25,15 @@ from app.schemas.portfolio_rebalance import (
     RebalanceActionRead,
     RebalanceExecuteResponse,
     RebalanceInstrumentPreview,
+    RebalanceLiveExecuteRequest,
+    RebalanceLiveExecuteResponse,
+    RebalanceLiveOrderResult,
     RebalancePreviewResponse,
 )
 from app.schemas.transaction import InvestmentTransactionCreate
 from app.services.pricing.db_provider import DbPricingProvider
+from app.services.tinvest_broker_service import TinvestBrokerService
+from app.services.tinvest_client import tinvest_client
 from app.services.transaction_service import TransactionService
 
 logger = logging.getLogger(__name__)
@@ -93,6 +103,28 @@ class _RebalanceLeg:
     action: str
     quantity: int
     total_amount: Decimal
+    lot: int
+    instrument_id: str
+
+
+def _plan_fingerprint(legs: list[_RebalanceLeg]) -> str:
+    parts: list[dict[str, object]] = []
+    for l in sorted(legs, key=lambda x: (x.action, x.ticker, x.fund_id)):
+        lo = max(1, int(l.lot))
+        lots_n = int(l.quantity) // lo if lo > 0 else 0
+        parts.append(
+            {
+                "action": l.action,
+                "ticker": l.ticker,
+                "fund_id": l.fund_id,
+                "qty": int(l.quantity),
+                "lots": lots_n,
+                "instrument_id": l.instrument_id,
+                "amt": str(q_money(l.total_amount)),
+            }
+        )
+    raw = json.dumps(parts, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 class PortfolioRebalanceService:
@@ -112,6 +144,9 @@ class PortfolioRebalanceService:
         self,
         user_id: int,
         amount: Decimal | None,
+        *,
+        positions_override: list | None = None,
+        cash_override: Decimal | None = None,
     ) -> tuple[list, set[int], dict[int, Decimal], Decimal, Decimal, Decimal, Decimal, dict[int, Decimal]]:
         """actives, act_ids, deltas, total_market, cash, scale, total_wealth, current_by_cat (руб. по категориям)."""
         if amount is not None and amount < 0:
@@ -122,7 +157,7 @@ class PortfolioRebalanceService:
         _validate_actives(actives)
         act_ids = {int(c.id) for c in actives}
 
-        positions = self._portfolio.list_positions(user_id)
+        positions = positions_override if positions_override is not None else self._portfolio.list_positions(user_id)
         current_by_cat: dict[int, Decimal] = {}
         for p in positions:
             if p.fund is None:
@@ -130,17 +165,25 @@ class PortfolioRebalanceService:
             cid = int(p.category_id)
             if cid not in act_ids:
                 continue
-            unit = q_price(self._pricing.get_unit_price(p.fund))
+            bu = getattr(p, "broker_unit", None)
+            if bu is not None and bu > 0:
+                unit = q_price(bu)
+            else:
+                unit = q_price(self._pricing.get_unit_price(p.fund))
             if unit <= 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Некорректная цена фонда id={p.fund_id}; обновите котировки",
                 )
-            cur = q_money(Decimal(int(p.total_units)) * unit)
+            units = int(getattr(p, "total_units", 0))
+            cur = q_money(Decimal(units) * unit)
             current_by_cat[cid] = current_by_cat.get(cid, Decimal("0")) + cur
 
         total_market = q_money(sum(current_by_cat.values(), start=Decimal("0")))
-        cash = q_money(self._cash.cash_balance(user_id))
+        if cash_override is not None:
+            cash = q_money(cash_override)
+        else:
+            cash = q_money(self._cash.cash_balance(user_id))
         total_wealth = q_money(total_market + cash)
 
         deltas: dict[int, Decimal] = {}
@@ -189,9 +232,11 @@ class PortfolioRebalanceService:
         act_ids: set[int],
         deltas: dict[int, Decimal],
         cash_balance: Decimal,
+        *,
+        positions_override: list | None = None,
     ) -> list[_RebalanceLeg]:
         """Сырые дельты → ноги с ограничением по позиции, лотам и доступному кэшу."""
-        positions = self._portfolio.list_positions(user_id)
+        positions = positions_override if positions_override is not None else self._portfolio.list_positions(user_id)
         remaining = self._remaining_units(positions, act_ids)
 
         raw_sells: list[tuple[int, int, str, str, Decimal]] = []  # cat_id, fund_id, ticker, action, rub
@@ -236,6 +281,14 @@ class PortfolioRebalanceService:
                 continue
             amt = q_money(Decimal(qty) * unit)
             rem[key] = avail - qty
+            iid = (
+                (fund_ent.instrument_uid or "").strip()
+                or (fund_ent.figi or "").strip()
+                or (fund_ent.figi_or_uid or "").strip()
+            )
+            if not iid:
+                logger.warning("rebalance: skip sell fund_id=%s — нет instrument_uid/figi", fid)
+                continue
             legs.append(
                 _RebalanceLeg(
                     category_id=cid,
@@ -244,6 +297,8 @@ class PortfolioRebalanceService:
                     action="sell",
                     quantity=qty,
                     total_amount=amt,
+                    lot=lot,
+                    instrument_id=iid,
                 )
             )
 
@@ -293,6 +348,14 @@ class PortfolioRebalanceService:
                     continue
                 amt = q_money(Decimal(qty) * unit)
             cash_run = q_money(cash_run - amt)
+            iid = (
+                (fund_ent.instrument_uid or "").strip()
+                or (fund_ent.figi or "").strip()
+                or (fund_ent.figi_or_uid or "").strip()
+            )
+            if not iid:
+                logger.warning("rebalance: skip buy fund_id=%s — нет instrument_uid/figi", fid)
+                continue
             legs.append(
                 _RebalanceLeg(
                     category_id=cid,
@@ -301,6 +364,8 @@ class PortfolioRebalanceService:
                     action="buy",
                     quantity=qty,
                     total_amount=amt,
+                    lot=lot,
+                    instrument_id=iid,
                 )
             )
 
@@ -308,14 +373,38 @@ class PortfolioRebalanceService:
         buys_rest = [l for l in legs if l.action == "buy"]
         return sells_first + buys_rest
 
-    def preview(self, user_id: int, amount: Decimal | None) -> RebalancePreviewResponse:
+    def preview(
+        self,
+        user_id: int,
+        amount: Decimal | None,
+        *,
+        mode: Literal["simulation", "live"] = "simulation",
+    ) -> RebalancePreviewResponse:
+        account_id: str | None = None
+        pos_ov: list | None = None
+        cash_ov: Decimal | None = None
+        if mode == "live":
+            br = TinvestBrokerService(self._db, settings)
+            account_id = br.resolve_account_id()
+            pos_ov, cash_ov = br.live_engine_positions_and_cash(user_id, account_id)
+
         actives, act_ids, deltas, total_market, cash, scale, total_wealth, current_by_cat = self._raw_deltas_scaled(
-            user_id, amount
+            user_id, amount, positions_override=pos_ov, cash_override=cash_ov
         )
 
-        legs = self._build_legs(user_id, actives, act_ids, deltas, cash)
+        legs = self._build_legs(
+            user_id, actives, act_ids, deltas, cash, positions_override=pos_ov
+        )
         actions = [
-            RebalanceActionRead(fund_id=l.fund_id, ticker=l.ticker, action=l.action, amount=l.total_amount)
+            RebalanceActionRead(
+                fund_id=l.fund_id,
+                ticker=l.ticker,
+                action=l.action,
+                amount=l.total_amount,
+                quantity=l.quantity,
+                lots=int(l.quantity // max(1, l.lot)),
+                instrument_id=l.instrument_id,
+            )
             for l in legs
         ]
         buy_sum = q_money(sum((l.total_amount for l in legs if l.action == "buy"), Decimal("0")))
@@ -350,6 +439,7 @@ class PortfolioRebalanceService:
                 )
             )
 
+        fp = _plan_fingerprint(legs)
         return RebalancePreviewResponse(
             cash_balance=cash,
             scale=scale.quantize(Decimal("0.0001")),
@@ -358,6 +448,9 @@ class PortfolioRebalanceService:
             before_percent=before_pct,
             after_percent=after_pct,
             instruments=instruments,
+            mode=mode,
+            plan_fingerprint=fp,
+            account_id=account_id,
         )
 
     def execute(self, user_id: int, amount: Decimal | None) -> RebalanceExecuteResponse:
@@ -395,3 +488,131 @@ class PortfolioRebalanceService:
             created.append(int(read.id))
 
         return RebalanceExecuteResponse(created_transaction_ids=created)
+
+    def execute_live(self, user_id: int, payload: RebalanceLiveExecuteRequest) -> RebalanceLiveExecuteResponse:
+        if not payload.dry_run and not payload.confirm:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Для реальных заявок передайте confirm=true (или dry_run=true для проверки без ордеров)",
+            )
+
+        br = TinvestBrokerService(self._db, settings)
+        account_id = br.resolve_account_id()
+        pos_ov, cash_ov = br.live_engine_positions_and_cash(user_id, account_id)
+
+        actives, act_ids, deltas, _tm, cash, _sc, _tw, _cbc = self._raw_deltas_scaled(
+            user_id, payload.amount, positions_override=pos_ov, cash_override=cash_ov
+        )
+        legs = self._build_legs(
+            user_id, actives, act_ids, deltas, cash, positions_override=pos_ov
+        )
+        fp = _plan_fingerprint(legs)
+        if fp != payload.plan_fingerprint.strip():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="План ребаланса изменился с момента preview — пересчитайте preview (live)",
+            )
+
+        if payload.dry_run:
+            return RebalanceLiveExecuteResponse(orders=[], dry_run=True)
+
+        sells = [l for l in legs if l.action == "sell"]
+        buys = [l for l in legs if l.action == "buy"]
+        ordered = sells + buys
+
+        results: list[RebalanceLiveOrderResult] = []
+
+        try:
+            from tinkoff.invest.schemas import (
+                OrderDirection,
+                OrderExecutionReportStatus,
+                OrderType,
+            )
+        except ImportError as e:  # pragma: no cover
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Пакет tinkoff-investments не установлен",
+            ) from e
+
+        with tinvest_client(settings) as client:
+            for leg in ordered:
+                lo = max(1, int(leg.lot))
+                lots_n = int(leg.quantity) // lo
+                if lots_n < 1:
+                    results.append(
+                        RebalanceLiveOrderResult(
+                            ticker=leg.ticker,
+                            action=leg.action,
+                            instrument_id=leg.instrument_id,
+                            lots=0,
+                            success=False,
+                            message="Ноль лотов после нормализации",
+                        )
+                    )
+                    continue
+                oid = str(uuid.uuid4())
+                direction = (
+                    OrderDirection.ORDER_DIRECTION_BUY
+                    if leg.action == "buy"
+                    else OrderDirection.ORDER_DIRECTION_SELL
+                )
+                logger.info(
+                    "live_order_submit user=%s account=%s instrument=%s lots=%s dir=%s order_id=%s",
+                    user_id,
+                    account_id,
+                    leg.instrument_id,
+                    lots_n,
+                    leg.action,
+                    oid,
+                )
+                try:
+                    r = client.orders.post_order(
+                        instrument_id=leg.instrument_id,
+                        quantity=lots_n,
+                        account_id=account_id,
+                        order_id=oid,
+                        direction=direction,
+                        order_type=OrderType.ORDER_TYPE_MARKET,
+                    )
+                    st = r.execution_report_status.name if r.execution_report_status is not None else None
+                    st_e = r.execution_report_status
+                    ok = st_e not in (
+                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_REJECTED,
+                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_CANCELLED,
+                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_UNSPECIFIED,
+                        None,
+                    )
+                    msg = (r.message or "").strip() or None
+                    logger.info(
+                        "live_order_result user=%s broker_order=%s status=%s msg=%s",
+                        user_id,
+                        r.order_id,
+                        st,
+                        msg,
+                    )
+                    results.append(
+                        RebalanceLiveOrderResult(
+                            ticker=leg.ticker,
+                            action=leg.action,
+                            instrument_id=leg.instrument_id,
+                            lots=lots_n,
+                            success=ok,
+                            order_id=r.order_id or None,
+                            execution_status=st,
+                            message=msg,
+                        )
+                    )
+                except Exception as e:
+                    logger.exception("live_order_failed user=%s ticker=%s", user_id, leg.ticker)
+                    results.append(
+                        RebalanceLiveOrderResult(
+                            ticker=leg.ticker,
+                            action=leg.action,
+                            instrument_id=leg.instrument_id,
+                            lots=lots_n,
+                            success=False,
+                            message=str(e)[:500],
+                        )
+                    )
+
+        return RebalanceLiveExecuteResponse(orders=results, dry_run=False)

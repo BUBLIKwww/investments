@@ -1,3 +1,4 @@
+from app.models.broker_setting import BrokerSetting
 from app.models.fund import Fund
 from app.models.investment_transaction import InvestmentTransaction
 from app.models.portfolio_position import PortfolioPosition
@@ -7,6 +8,7 @@ from app.models.topup_item import TopupItem
 from app.models.user import User
 
 __all__ = [
+    "BrokerSetting",
     "User",
     "StrategyCategory",
     "Fund",

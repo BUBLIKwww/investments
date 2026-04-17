@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,6 +44,10 @@ class CategorySummary(BaseModel):
 
 
 class PortfolioRead(BaseModel):
+    source: Literal["simulation", "live"] = Field(
+        default="simulation",
+        description="simulation — расчёт по журналу приложения; live — портфель с брокерского счёта T‑Invest",
+    )
     total_invested_amount: Decimal
     total_current_amount: Decimal
     total_pnl: Decimal = Field(description="Сумма PnL по позициям")

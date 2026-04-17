@@ -1,23 +1,33 @@
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.domain.money import q_money, q_price, to_decimal
 from app.repositories.portfolio_repository import PortfolioRepository
 from app.repositories.strategy_repository import StrategyRepository
 from app.schemas.rebalance import RebalanceCategoryRead, RebalanceRead
 from app.services.pricing.db_provider import DbPricingProvider
+from app.services.tinvest_broker_service import TinvestBrokerService
 
 
 class RebalanceService:
     def __init__(self, db: Session) -> None:
+        self._db = db
         self._portfolio = PortfolioRepository(db)
         self._strategy = StrategyRepository(db)
         self._pricing = DbPricingProvider()
 
-    def get_rebalance(self, user_id: int) -> RebalanceRead:
-        positions = self._portfolio.list_positions(user_id)
+    def get_rebalance(self, user_id: int, *, source: Literal["simulation", "live"] = "simulation") -> RebalanceRead:
         categories = self._strategy.list_for_user(user_id)
+
+        if source == "live":
+            br = TinvestBrokerService(self._db, settings)
+            account_id = br.resolve_account_id()
+            positions = br.live_engine_positions_and_cash(user_id, account_id)[0]
+        else:
+            positions = self._portfolio.list_positions(user_id)
 
         total_current = Decimal("0")
         current_by_category: dict[int, Decimal] = {}
@@ -26,7 +36,11 @@ class RebalanceService:
             if p.fund is None:
                 continue
             ticker_by_fund[int(p.fund.id)] = p.fund.ticker
-            unit = q_price(self._pricing.get_unit_price(p.fund))
+            bu = getattr(p, "broker_unit", None)
+            if bu is not None and bu > 0:
+                unit = q_price(bu)
+            else:
+                unit = q_price(self._pricing.get_unit_price(p.fund))
             cur = q_money(Decimal(int(p.total_units)) * unit)
             cid = int(p.category_id)
             current_by_category[cid] = current_by_category.get(cid, Decimal("0")) + cur

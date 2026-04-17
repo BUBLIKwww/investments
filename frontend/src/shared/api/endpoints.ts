@@ -1,6 +1,8 @@
 import { apiRequest } from "@/shared/api/client";
 import { parseDecimal } from "@/shared/lib/format";
 import type {
+  BrokerAccountRead,
+  BrokerSettingsRead,
   FundAddPayload,
   FundRead,
   FundSearchHit,
@@ -9,6 +11,7 @@ import type {
   InvestmentTransactionWritePayload,
   PortfolioRead,
   RebalanceExecuteResult,
+  RebalanceLiveExecuteResult,
   RebalanceRead,
   RebalanceSmartPreview,
   StrategyRead,
@@ -73,6 +76,7 @@ function normalizePortfolioPosition(p: Record<string, unknown>): PortfolioRead["
 function normalizePortfolioRead(raw: unknown): PortfolioRead {
   if (!raw || typeof raw !== "object") {
     return {
+      source: "simulation",
       total_invested_amount: "0",
       total_current_amount: "0",
       total_pnl: "0",
@@ -97,6 +101,7 @@ function normalizePortfolioRead(raw: unknown): PortfolioRead {
     totalPnlPct = inv > 0 && Number.isFinite(pnlN) ? String(Number(((pnlN / inv) * 100).toFixed(4))) : "0";
   }
   return {
+    source: o.source === "live" ? "live" : "simulation",
     total_invested_amount: typeof o.total_invested_amount === "string" ? o.total_invested_amount : String(o.total_invested_amount ?? "0"),
     total_current_amount: typeof o.total_current_amount === "string" ? o.total_current_amount : String(o.total_current_amount ?? "0"),
     total_pnl: totalPnl,
@@ -106,8 +111,8 @@ function normalizePortfolioRead(raw: unknown): PortfolioRead {
   };
 }
 
-export async function getPortfolio(): Promise<PortfolioRead> {
-  const raw = await apiRequest<unknown>("/api/v1/portfolio");
+export async function getPortfolio(source: "simulation" | "live" = "live"): Promise<PortfolioRead> {
+  const raw = await apiRequest<unknown>(`/api/v1/portfolio?source=${source}`);
   return normalizePortfolioRead(raw);
 }
 
@@ -129,13 +134,39 @@ export async function getTopupHistory(): Promise<TopupHistoryRead[]> {
   return apiRequest<TopupHistoryRead[]>("/api/v1/topups/history");
 }
 
-export async function getRebalance(): Promise<RebalanceRead> {
-  return apiRequest<RebalanceRead>("/api/v1/rebalance");
+export async function getRebalance(source: "simulation" | "live" = "live"): Promise<RebalanceRead> {
+  return apiRequest<RebalanceRead>(`/api/v1/rebalance?source=${source}`);
+}
+
+export async function listBrokerAccounts(): Promise<BrokerAccountRead[]> {
+  return apiRequest<BrokerAccountRead[]>("/api/v1/broker/accounts");
+}
+
+export async function getBrokerSettings(): Promise<BrokerSettingsRead> {
+  return apiRequest<BrokerSettingsRead>("/api/v1/broker/settings");
+}
+
+export async function putBrokerSettings(selected_account_id: string | null): Promise<BrokerSettingsRead> {
+  return apiRequest<BrokerSettingsRead>("/api/v1/broker/settings", {
+    method: "PUT",
+    body: JSON.stringify({ selected_account_id: selected_account_id }),
+  });
 }
 
 function normalizeRebalanceSmartPreview(raw: unknown): RebalanceSmartPreview {
   if (!raw || typeof raw !== "object") {
-    return { cash_balance: "0", scale: "0", actions: [], total_used: "0", before_percent: "0", after_percent: "0", instruments: [] };
+    return {
+      cash_balance: "0",
+      scale: "0",
+      actions: [],
+      total_used: "0",
+      before_percent: "0",
+      after_percent: "0",
+      instruments: [],
+      mode: "simulation",
+      plan_fingerprint: "",
+      account_id: null,
+    };
   }
   const o = raw as Record<string, unknown>;
   const acts = Array.isArray(o.actions) ? o.actions : [];
@@ -146,6 +177,9 @@ function normalizeRebalanceSmartPreview(raw: unknown): RebalanceSmartPreview {
     total_used: decStr(o.total_used),
     before_percent: decStr(o.before_percent),
     after_percent: decStr(o.after_percent),
+    mode: o.mode === "live" ? "live" : "simulation",
+    plan_fingerprint: String(o.plan_fingerprint ?? ""),
+    account_id: o.account_id == null ? null : String(o.account_id),
     actions: acts.map((a) => {
       const r = a as Record<string, unknown>;
       return {
@@ -153,6 +187,9 @@ function normalizeRebalanceSmartPreview(raw: unknown): RebalanceSmartPreview {
         ticker: String(r.ticker ?? ""),
         action: r.action === "sell" ? "sell" : "buy",
         amount: decStr(r.amount),
+        quantity: Number(r.quantity ?? 0),
+        lots: Number(r.lots ?? 0),
+        instrument_id: String(r.instrument_id ?? ""),
       };
     }),
     instruments: inst.map((row) => {
@@ -168,10 +205,13 @@ function normalizeRebalanceSmartPreview(raw: unknown): RebalanceSmartPreview {
   };
 }
 
-export async function postRebalancePreview(payload: { amount: number | null }): Promise<RebalanceSmartPreview> {
+export async function postRebalancePreview(payload: {
+  amount: number | null;
+  mode?: "simulation" | "live";
+}): Promise<RebalanceSmartPreview> {
   const raw = await apiRequest<unknown>("/api/v1/portfolio/rebalance/preview", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ amount: payload.amount, mode: payload.mode ?? "simulation" }),
   });
   return normalizeRebalanceSmartPreview(raw);
 }
@@ -180,6 +220,23 @@ export async function postRebalanceExecute(payload: { amount: number | null }): 
   return apiRequest<RebalanceExecuteResult>("/api/v1/portfolio/rebalance/execute", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function postRebalanceExecuteLive(payload: {
+  amount: number | null;
+  plan_fingerprint: string;
+  confirm: boolean;
+  dry_run?: boolean;
+}): Promise<RebalanceLiveExecuteResult> {
+  return apiRequest<RebalanceLiveExecuteResult>("/api/v1/portfolio/rebalance/execute-live", {
+    method: "POST",
+    body: JSON.stringify({
+      amount: payload.amount,
+      plan_fingerprint: payload.plan_fingerprint,
+      confirm: payload.confirm,
+      dry_run: payload.dry_run ?? false,
+    }),
   });
 }
 

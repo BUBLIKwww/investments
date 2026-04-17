@@ -70,6 +70,7 @@ export type PortfolioPositionRead = {
 };
 
 export type PortfolioRead = {
+  source?: "simulation" | "live";
   total_invested_amount: string;
   total_current_amount: string;
   total_pnl: string;
@@ -152,6 +153,9 @@ export type RebalanceSmartAction = {
   ticker: string;
   action: "buy" | "sell";
   amount: string;
+  quantity: number;
+  lots: number;
+  instrument_id: string;
 };
 
 export type RebalanceSmartInstrument = {
@@ -170,10 +174,42 @@ export type RebalanceSmartPreview = {
   before_percent: string;
   after_percent: string;
   instruments: RebalanceSmartInstrument[];
+  mode: "simulation" | "live";
+  plan_fingerprint: string;
+  account_id: string | null;
 };
 
 export type RebalanceExecuteResult = {
   created_transaction_ids: number[];
+};
+
+export type RebalanceLiveOrderResult = {
+  ticker: string;
+  action: "buy" | "sell";
+  instrument_id: string;
+  lots: number;
+  success: boolean;
+  order_id: string | null;
+  execution_status: string | null;
+  message: string | null;
+};
+
+export type RebalanceLiveExecuteResult = {
+  orders: RebalanceLiveOrderResult[];
+  dry_run: boolean;
+};
+
+export type BrokerAccountRead = {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  access_level: string;
+};
+
+export type BrokerSettingsRead = {
+  selected_account_id: string | null;
+  default_account_id_env: string | null;
 };
 
 export type StrategyCategoryRead = {

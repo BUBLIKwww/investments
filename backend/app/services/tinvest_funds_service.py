@@ -14,29 +14,9 @@ from app.domain.money import q_price
 from app.models.fund import Fund
 from app.repositories.fund_repository import FundRepository
 from app.schemas.fund import FundAddRequest, FundRead, FundSearchResult
+from app.services.tinvest_client import tinvest_client
 
 logger = logging.getLogger(__name__)
-
-
-def _tinvest_client(settings: Settings):
-    try:
-        from tinkoff.invest import Client
-        from tinkoff.invest.constants import INVEST_GRPC_API, INVEST_GRPC_API_SANDBOX
-    except ImportError as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Сервер: не установлен пакет tinkoff-investments",
-        ) from e
-
-    token = (settings.TINVEST_TOKEN or "").strip()
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="TINVEST_TOKEN не задан.",
-        )
-
-    target = INVEST_GRPC_API_SANDBOX if settings.TINVEST_USE_SANDBOX else INVEST_GRPC_API
-    return Client(token, target=target)
 
 
 class TinvestFundsService:
@@ -57,7 +37,7 @@ class TinvestFundsService:
         out: list[FundSearchResult] = []
         seen_uid: set[str] = set()
 
-        with _tinvest_client(self._settings) as client:
+        with tinvest_client(self._settings) as client:
             r = client.instruments.find_instrument(query=q, api_trade_available_flag=True)
             uids_order: list[str] = []
             for short in r.instruments:
@@ -120,7 +100,7 @@ class TinvestFundsService:
         from tinkoff.invest.utils import quotation_to_decimal
 
         now = datetime.now(UTC)
-        with _tinvest_client(self._settings) as client:
+        with tinvest_client(self._settings) as client:
             full = client.instruments.get_instrument_by(
                 id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_UID,
                 id=uid,
@@ -170,7 +150,7 @@ class TinvestFundsService:
         from tinkoff.invest.utils import quotation_to_decimal
 
         now = datetime.now(UTC)
-        with _tinvest_client(self._settings) as client:
+        with tinvest_client(self._settings) as client:
             lp = client.market_data.get_last_prices(instrument_id=[uid])
             for p in lp.last_prices:
                 if (p.instrument_uid or "").strip() == uid:

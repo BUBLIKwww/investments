@@ -141,8 +141,8 @@ export function TransactionFormPage() {
 
   const invalidateAll = async () => {
     await Promise.all([
-      qc.invalidateQueries({ queryKey: queryKeys.portfolio }),
-      qc.invalidateQueries({ queryKey: queryKeys.rebalance }),
+        qc.invalidateQueries({ queryKey: ["portfolio"] }),
+        qc.invalidateQueries({ queryKey: ["rebalance"] }),
       qc.invalidateQueries({ queryKey: queryKeys.transactions }),
       qc.invalidateQueries({ queryKey: queryKeys.topupHistory }),
       qc.invalidateQueries({ queryKey: queryKeys.funds }),

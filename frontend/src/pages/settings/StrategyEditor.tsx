@@ -144,8 +144,8 @@ export function StrategyEditor() {
       setSaveSuccess(true);
       await Promise.all([
         qc.invalidateQueries({ queryKey: queryKeys.strategy }),
-        qc.invalidateQueries({ queryKey: queryKeys.portfolio }),
-        qc.invalidateQueries({ queryKey: queryKeys.rebalance }),
+        qc.invalidateQueries({ queryKey: ["portfolio"] }),
+        qc.invalidateQueries({ queryKey: ["rebalance"] }),
       ]);
     },
     onError: (e: unknown) => {

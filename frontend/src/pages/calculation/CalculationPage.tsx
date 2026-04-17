@@ -37,10 +37,10 @@ export function CalculationPage() {
       setSaveError(null);
       clearTopupCalculation(qc);
       await Promise.all([
-        qc.invalidateQueries({ queryKey: queryKeys.portfolio }),
+        qc.invalidateQueries({ queryKey: ["portfolio"] }),
         qc.invalidateQueries({ queryKey: queryKeys.topupHistory }),
         qc.invalidateQueries({ queryKey: queryKeys.transactions }),
-        qc.invalidateQueries({ queryKey: queryKeys.rebalance }),
+        qc.invalidateQueries({ queryKey: ["rebalance"] }),
       ]);
       setSuccess(true);
     },
