@@ -60,11 +60,20 @@ export type PortfolioPositionRead = {
   current_amount: string;
   current_weight_percent: string;
   fund: FundRead;
+  current_price: string;
+  quantity: number;
+  current_value: string;
+  invested_value: string;
+  pnl: string;
+  pnl_percent: string;
+  last_price_updated_at?: string | null;
 };
 
 export type PortfolioRead = {
   total_invested_amount: string;
   total_current_amount: string;
+  total_pnl: string;
+  total_pnl_percent: string;
   categories: CategorySummary[];
   positions: PortfolioPositionRead[];
 };
@@ -136,6 +145,35 @@ export type RebalanceRead = {
   categories: RebalanceCategoryRead[];
   underweight: number[];
   overweight: number[];
+};
+
+export type RebalanceSmartAction = {
+  fund_id: number;
+  ticker: string;
+  action: "buy" | "sell";
+  amount: string;
+};
+
+export type RebalanceSmartInstrument = {
+  ticker: string;
+  fund_id: number;
+  current_percent: string;
+  target_percent: string;
+  after_percent: string;
+};
+
+export type RebalanceSmartPreview = {
+  cash_balance: string;
+  scale: string;
+  actions: RebalanceSmartAction[];
+  total_used: string;
+  before_percent: string;
+  after_percent: string;
+  instruments: RebalanceSmartInstrument[];
+};
+
+export type RebalanceExecuteResult = {
+  created_transaction_ids: number[];
 };
 
 export type StrategyCategoryRead = {

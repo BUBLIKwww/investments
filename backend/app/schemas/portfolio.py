@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,6 +21,16 @@ class PortfolioPositionRead(BaseModel):
     current_amount: Decimal = Field(ge=0)
     current_weight_percent: Decimal = Field(ge=0)
     fund: FundRead
+    current_price: Decimal = Field(description="Цена за шт. из каталога (Fund.price)", gt=0)
+    quantity: int = Field(ge=0, description="Количество штук в позиции (= total_units)")
+    current_value: Decimal = Field(ge=0, description="Рыночная оценка позиции")
+    invested_value: Decimal = Field(ge=0, description="Себестоимость (вложено)")
+    pnl: Decimal = Field(description="current_value − invested_value")
+    pnl_percent: Decimal = Field(description="PnL / invested_value * 100, 0 если вложено 0")
+    last_price_updated_at: datetime | None = Field(
+        default=None,
+        description="Момент обновления last price (как у fund.last_price_updated_at)",
+    )
 
 
 class CategorySummary(BaseModel):
@@ -34,5 +45,9 @@ class CategorySummary(BaseModel):
 class PortfolioRead(BaseModel):
     total_invested_amount: Decimal
     total_current_amount: Decimal
+    total_pnl: Decimal = Field(description="Сумма PnL по позициям")
+    total_pnl_percent: Decimal = Field(
+        description="total_pnl / total_invested_amount * 100, 0 если вложено 0",
+    )
     categories: list[CategorySummary]
     positions: list[PortfolioPositionRead]

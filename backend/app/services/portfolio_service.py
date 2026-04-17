@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -20,6 +21,8 @@ def _empty_portfolio() -> PortfolioRead:
     return PortfolioRead(
         total_invested_amount=Decimal("0"),
         total_current_amount=Decimal("0"),
+        total_pnl=Decimal("0"),
+        total_pnl_percent=Decimal("0"),
         categories=[],
         positions=[],
     )
@@ -105,12 +108,20 @@ class PortfolioService:
             )
 
         pos_reads: list[PortfolioPositionRead] = []
+        total_pnl = Decimal("0")
         for p in positions:
             cat = cat_by_id.get(int(p.category_id))
             cur_amt = current_by_position.get(int(p.id), Decimal("0"))
             cur_w = Decimal("0")
             if total_current > 0:
                 cur_w = q_money(cur_amt / total_current * Decimal("100"))
+            unit = q_money(self._pricing.get_unit_price(p.fund))
+            inv = to_decimal(p.invested_amount)
+            pnl = q_money(cur_amt - inv)
+            total_pnl += pnl
+            pnl_pct = q_money(pnl / inv * Decimal("100")) if inv > 0 else Decimal("0")
+            raw_ts = getattr(p.fund, "last_price_updated_at", None)
+            price_ts: datetime | None = raw_ts if isinstance(raw_ts, datetime) else None
             pos_reads.append(
                 PortfolioPositionRead(
                     id=p.id,
@@ -120,17 +131,30 @@ class PortfolioService:
                     category_name=cat.name if cat else "",
                     total_lots=int(p.total_lots),
                     total_units=int(p.total_units),
-                    invested_amount=to_decimal(p.invested_amount),
+                    invested_amount=inv,
                     average_buy_price=to_decimal(p.average_buy_price),
                     current_amount=cur_amt,
                     current_weight_percent=cur_w,
                     fund=FundRead.model_validate(p.fund),
+                    current_price=unit,
+                    quantity=int(p.total_units),
+                    current_value=cur_amt,
+                    invested_value=inv,
+                    pnl=pnl,
+                    pnl_percent=pnl_pct,
+                    last_price_updated_at=price_ts,
                 )
             )
+        total_pnl = q_money(total_pnl)
+        total_pnl_pct = (
+            q_money(total_pnl / total_invested * Decimal("100")) if total_invested > 0 else Decimal("0")
+        )
 
         return PortfolioRead(
             total_invested_amount=total_invested,
             total_current_amount=total_current,
+            total_pnl=total_pnl,
+            total_pnl_percent=total_pnl_pct,
             categories=summaries,
             positions=pos_reads,
         )

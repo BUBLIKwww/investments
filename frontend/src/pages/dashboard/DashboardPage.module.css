@@ -40,6 +40,33 @@
   font-weight: 500;
 }
 
+.heroPnl {
+  margin: 10px 0 0;
+  font-family: var(--font-money);
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.03em;
+}
+
+.heroPnlPct {
+  font-size: 0.85em;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+.pnlPos {
+  color: var(--success);
+}
+
+.pnlNeg {
+  color: var(--danger);
+}
+
+.pnlZero {
+  color: var(--muted);
+}
+
 .bannerWrap {
   margin-bottom: 14px;
 }
@@ -67,6 +94,12 @@
 @media (min-width: 520px) {
   .summaryGrid {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 780px) {
+  .summaryGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -157,6 +190,29 @@
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--muted);
+}
+
+.posPnlRow {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--border);
+  background: var(--accent-soft);
+}
+
+.posPnlValue {
+  margin: 6px 0 0;
+  font-family: var(--font-money);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: -0.02em;
+}
+
+.posPnlBracket {
+  font-size: 0.88em;
+  font-weight: 600;
+  opacity: 0.95;
 }
 
 .posGrid {

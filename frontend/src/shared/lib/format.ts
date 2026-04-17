@@ -19,6 +19,14 @@ export function formatRub(amount: string | number): string {
   return rubFormatter.format(n);
 }
 
+/** Рубли с явным знаком «+» для прибыли (для убытка — обычный минус от Intl). */
+export function formatSignedRub(amount: string | number): string {
+  const n = typeof amount === "string" ? parseDecimal(amount) : amount;
+  if (!Number.isFinite(n)) return "—";
+  if (n > 0) return `+${rubFormatter.format(n)}`;
+  return rubFormatter.format(n);
+}
+
 export function formatPercent(value: string | number, fractionDigits = 1): string {
   const n = typeof value === "string" ? parseDecimal(value) : value;
   if (!Number.isFinite(n)) return "—";

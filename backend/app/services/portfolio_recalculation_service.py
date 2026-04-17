@@ -30,27 +30,30 @@ class _Bucket:
 def _apply_transaction(bucket: _Bucket, op: str, qty: int, total_amount: Decimal) -> None:
     total_amount = q_money(total_amount)
     if op == TransactionOperationType.BUY.value:
-        new_units = bucket.units + qty
-        new_inv = q_money(bucket.invested + total_amount)
-        bucket.units = new_units
-        bucket.invested = new_inv
-        bucket.avg_price = q_price(new_inv / Decimal(new_units)) if new_units else Decimal("0")
+        bucket.units = int(bucket.units) + int(qty)
+        bucket.invested = q_money(bucket.invested + total_amount)
+        if bucket.units > 0:
+            bucket.avg_price = q_price(bucket.invested / Decimal(bucket.units))
+        else:
+            bucket.avg_price = Decimal("0")
         return
     if op == TransactionOperationType.SELL.value:
         if qty > bucket.units:
             msg = f"Нельзя продать {qty} шт.: в позиции только {bucket.units} шт."
             raise ValueError(msg)
-        removed = q_money(Decimal(qty) * bucket.avg_price)
-        new_units = bucket.units - qty
-        new_inv = q_money(bucket.invested - removed)
-        bucket.units = new_units
-        bucket.invested = new_inv
-        if new_units <= 0:
+        if bucket.units <= 0:
+            msg = "Пустая позиция"
+            raise ValueError(msg)
+        # Списание себестоимости пропорционально доле проданных штук (avg = invested / units).
+        cost_sold = q_money(bucket.invested * Decimal(qty) / Decimal(bucket.units))
+        bucket.units = int(bucket.units) - int(qty)
+        bucket.invested = q_money(bucket.invested - cost_sold)
+        if bucket.units <= 0:
             bucket.units = 0
             bucket.invested = Decimal("0")
             bucket.avg_price = Decimal("0")
         else:
-            bucket.avg_price = q_price(new_inv / Decimal(new_units))
+            bucket.avg_price = q_price(bucket.invested / Decimal(bucket.units))
         return
     msg = f"Неизвестный тип операции: {op}"
     raise ValueError(msg)

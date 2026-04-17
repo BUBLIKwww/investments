@@ -15,7 +15,7 @@ import { SectionHeader } from "@/shared/ui/SectionHeader";
 import { SummaryCard } from "@/shared/ui/SummaryCard";
 import { ValidationBanner } from "@/shared/ui/ValidationBanner";
 import { Button } from "@/shared/ui/Button";
-import { formatPercent, formatRub } from "@/shared/lib/format";
+import { formatDateTime, formatPercent, formatRub, formatSignedRub, parseDecimal } from "@/shared/lib/format";
 
 import styles from "./DashboardPage.module.css";
 
@@ -83,6 +83,11 @@ export function DashboardPage() {
   const busyPrices = refreshMutation.isPending;
   const totalCurrent = data?.total_current_amount ?? 0;
   const totalInvested = data?.total_invested_amount ?? 0;
+  const totalPnlStr = data?.total_pnl ?? "0";
+  const totalPnlPctStr = data?.total_pnl_percent ?? "0";
+  const totalPnlN = parseDecimal(totalPnlStr);
+  const pnlTone =
+    !Number.isFinite(totalPnlN) || totalPnlN === 0 ? "" : totalPnlN > 0 ? styles.pnlPos : styles.pnlNeg;
 
   return (
     <div>
@@ -101,6 +106,11 @@ export function DashboardPage() {
         <GlassSurface variant="strong" elevated className={styles.heroCard}>
           <p className={styles.heroEyebrow}>Оценка портфеля</p>
           <p className={styles.heroFigure}>{formatRub(totalCurrent)}</p>
+          {!isEmpty && data ? (
+            <p className={[styles.heroPnl, pnlTone].filter(Boolean).join(" ")} aria-label="Прибыль или убыток">
+              {formatSignedRub(totalPnlStr)} <span className={styles.heroPnlPct}>({formatPercent(totalPnlPctStr, 2)})</span>
+            </p>
+          ) : null}
           <div className={styles.heroMeta}>
             Вложено {formatRub(totalInvested)}
             {isEmpty ? <span className={styles.heroHint}> · добавьте сделку или пополнение</span> : null}
@@ -156,6 +166,11 @@ export function DashboardPage() {
               value={formatRub(totalCurrent)}
               hint="По ценам фондов на сервере"
             />
+            <SummaryCard
+              label="PnL"
+              value={formatSignedRub(totalPnlStr)}
+              hint={`Доля от вложений: ${formatPercent(totalPnlPctStr, 2)}`}
+            />
           </div>
 
           <div className={styles.actions}>
@@ -185,37 +200,54 @@ export function DashboardPage() {
 
           <SectionHeader title="Позиции" subtitle="Фонды в портфеле" />
           <div className={styles.grid}>
-            {data.positions.map((p) => (
-              <GlassSurface key={p.id} variant="strong" className={styles.positionCard}>
-                <div className={styles.posTop}>
-                  <div>
-                    <p className={styles.posTitle}>{p.fund.name}</p>
-                    <p className={styles.posSub}>
-                      {p.category_name} · {p.total_units} шт.
+            {data.positions.map((p) => {
+              const pnlN = parseDecimal(p.pnl);
+              const pnlCls =
+                !Number.isFinite(pnlN) || pnlN === 0 ? styles.pnlZero : pnlN > 0 ? styles.pnlPos : styles.pnlNeg;
+              return (
+                <GlassSurface key={p.id} variant="strong" className={styles.positionCard}>
+                  <div className={styles.posTop}>
+                    <div>
+                      <p className={styles.posTitle}>{p.fund.name}</p>
+                      <p className={styles.posSub}>
+                        {p.category_name} · {p.quantity} шт. · цена {formatRub(p.current_price)}
+                        {p.last_price_updated_at ? (
+                          <>
+                            {" "}
+                            · кот. {formatDateTime(p.last_price_updated_at)}
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                    <span className={styles.ticker}>{p.fund.ticker}</span>
+                  </div>
+                  <div className={styles.posPnlRow}>
+                    <p className={styles.k}>Результат</p>
+                    <p className={[styles.posPnlValue, pnlCls].join(" ")}>
+                      {formatSignedRub(p.pnl)} <span className={styles.posPnlBracket}>({formatPercent(p.pnl_percent, 2)})</span>
                     </p>
                   </div>
-                  <span className={styles.ticker}>{p.fund.ticker}</span>
-                </div>
-                <div className={styles.posGrid}>
-                  <div>
-                    <p className={styles.k}>Вложено</p>
-                    <p className={styles.v}>{formatRub(p.invested_amount)}</p>
+                  <div className={styles.posGrid}>
+                    <div>
+                      <p className={styles.k}>Вложено</p>
+                      <p className={styles.v}>{formatRub(p.invested_value)}</p>
+                    </div>
+                    <div>
+                      <p className={styles.k}>Оценка</p>
+                      <p className={styles.v}>{formatRub(p.current_value)}</p>
+                    </div>
+                    <div>
+                      <p className={styles.k}>Доля</p>
+                      <p className={styles.v}>{formatPercent(p.current_weight_percent)}</p>
+                    </div>
+                    <div>
+                      <p className={styles.k}>Средняя</p>
+                      <p className={styles.v}>{formatRub(p.average_buy_price)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className={styles.k}>Оценка</p>
-                    <p className={styles.v}>{formatRub(p.current_amount)}</p>
-                  </div>
-                  <div>
-                    <p className={styles.k}>Доля</p>
-                    <p className={styles.v}>{formatPercent(p.current_weight_percent)}</p>
-                  </div>
-                  <div>
-                    <p className={styles.k}>Средняя</p>
-                    <p className={styles.v}>{formatRub(p.average_buy_price)}</p>
-                  </div>
-                </div>
-              </GlassSurface>
-            ))}
+                </GlassSurface>
+              );
+            })}
           </div>
         </>
       )}

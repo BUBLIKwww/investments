@@ -4,10 +4,12 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
+from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.domain.money import q_price
+from app.models.fund import Fund
 from app.repositories.fund_repository import FundRepository
 from app.schemas.fund import FundRead, FundsPricesRefreshResponse
 
@@ -37,12 +39,18 @@ class PricingService:
             ) from e
 
         funds = self._funds.list_active()
+        now = datetime.now(UTC)
         uids: list[str] = []
         for f in funds:
             uid = (f.instrument_uid or "").strip()
             if uid:
                 uids.append(uid)
         if not uids:
+            self._db.execute(
+                update(Fund)
+                .where(Fund.is_active.is_(True), Fund.last_price_updated_at.is_(None))
+                .values(last_price_updated_at=now)
+            )
             self._db.commit()
             refreshed = self._funds.list_active()
             return FundsPricesRefreshResponse(
@@ -51,7 +59,6 @@ class PricingService:
             )
 
         target = INVEST_GRPC_API_SANDBOX if self._settings.TINVEST_USE_SANDBOX else INVEST_GRPC_API
-        now = datetime.now(UTC)
 
         with Client(token, target=target) as client:
             lp = client.market_data.get_last_prices(instrument_id=uids)
@@ -72,6 +79,13 @@ class PricingService:
                 continue
             self._funds.update_price(int(f.id), price=q_price(new_price), updated_at=now)
             updated_count += 1
+
+        # Заполнить отсутствующий timestamp (например, после миграций), чтобы API было однозначно.
+        self._db.execute(
+            update(Fund)
+            .where(Fund.is_active.is_(True), Fund.last_price_updated_at.is_(None))
+            .values(last_price_updated_at=now)
+        )
 
         self._db.commit()
         refreshed = self._funds.list_active()

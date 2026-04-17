@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getFunds, getStrategy, updateStrategy } from "@/shared/api/endpoints";
 import { queryKeys } from "@/shared/api/query-keys";
 import type { FundRead, StrategyCategoryRead, StrategyUpdateRequest } from "@/shared/api/types";
+import { FundSearchPicker } from "@/widgets/fund-search/FundSearchPicker";
 import { getUserFacingApiError } from "@/shared/lib/api-error-message";
 import { formatPercent, formatRub, parseDecimal } from "@/shared/lib/format";
 import { Button } from "@/shared/ui/Button";
@@ -12,8 +13,6 @@ import { ErrorBlock } from "@/shared/ui/ErrorBlock";
 import { LoadingBlock } from "@/shared/ui/LoadingBlock";
 import { SectionHeader } from "@/shared/ui/SectionHeader";
 import { ValidationBanner } from "@/shared/ui/ValidationBanner";
-import { FundPickerModal } from "@/widgets/fund-picker/FundPickerModal";
-
 import styles from "./SettingsPage.module.css";
 
 export type StrategyCategoryFormRow = {
@@ -21,6 +20,8 @@ export type StrategyCategoryFormRow = {
   name: string;
   target_percent: string;
   fund_id: number;
+  /** Снимок с API / после выбора — чтобы показывать фонд без обязательного GET /funds */
+  fundSnapshot: FundRead | null;
   sort_order: number;
   is_active: boolean;
 };
@@ -31,6 +32,7 @@ function fromRead(c: StrategyCategoryRead): StrategyCategoryFormRow {
     name: c.name,
     target_percent: c.target_percent,
     fund_id: c.fund_id,
+    fundSnapshot: c.fund,
     sort_order: c.sort_order,
     is_active: c.is_active,
   };
@@ -95,7 +97,7 @@ export function StrategyEditor() {
   const qc = useQueryClient();
   const [rows, setRows] = useState<StrategyCategoryFormRow[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+  const [fundSearchError, setFundSearchError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -203,6 +205,9 @@ export function StrategyEditor() {
           <ValidationBanner variant="success" title="Сохранено" message="Стратегия обновлена." />
         ) : null}
         {saveError ? <ValidationBanner variant="error" title="Ошибка сохранения" message={saveError} /> : null}
+        {fundSearchError ? (
+          <ValidationBanner variant="error" title="Инструмент" message={fundSearchError} />
+        ) : null}
         {!validation.ok ? (
           <ValidationBanner variant="error" title="Проверьте данные" messages={validation.messages} />
         ) : null}
@@ -221,10 +226,12 @@ export function StrategyEditor() {
         </div>
 
         {rows.length === 0 ? (
-          <p className={styles.emptyHint}>Категории стратегии не заданы. Добавьте категории и привяжите к инструментам из каталога (сначала добавьте инструмент через сделку или обновите список фондов).</p>
+          <p className={styles.emptyHint}>
+            Категории стратегии не заданы. Добавьте категории и выберите инструмент поиском (как при создании сделки).
+          </p>
         ) : (
           rows.map((row, index) => {
-            const fund = fundById.get(row.fund_id);
+            const fund = fundById.get(row.fund_id) ?? row.fundSnapshot ?? undefined;
             return (
               <article key={row.id ?? `new-${index}-${row.sort_order}`} className={styles.categoryCard}>
                 <div className={styles.categoryHead}>
@@ -265,31 +272,49 @@ export function StrategyEditor() {
                   </div>
                 </div>
 
-                <div className={styles.fundLine}>
-                  <span className={styles.fieldLabel}>Фонд</span>
-                  {fund ? (
-                    <>
-                      <span className={styles.fundName}>{fund.name}</span>
-                      <span className={styles.fundMeta}>
-                        {fund.ticker} · {formatRub(fund.price)} · лот {fund.lot}
-                      </span>
-                    </>
-                  ) : (
-                    <span className={styles.fundMeta}>Фонд #{row.fund_id} (нет в списке загрузки)</span>
-                  )}
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel} htmlFor={`cat-fund-${row.id ?? `i-${index}`}`}>
+                    Инструмент
+                  </label>
+                  <FundSearchPicker
+                    key={`${row.id ?? "new"}-${row.fund_id}-${index}`}
+                    inputId={`cat-fund-${row.id ?? `i-${index}`}`}
+                    disabled={formLocked}
+                    selectedFundId={row.fund_id}
+                    selectedFund={fund ?? null}
+                    onFundSelected={(f) => {
+                      setFundSearchError(null);
+                      setDirty(true);
+                      updateRow(index, { fund_id: f.id, fundSnapshot: f });
+                    }}
+                    onClearFund={() => {
+                      setDirty(true);
+                      updateRow(index, { fund_id: 0, fundSnapshot: null });
+                    }}
+                    onAddError={(_title, message) => {
+                      setFundSearchError(message);
+                    }}
+                  />
+                  {fund && row.fund_id > 0 ? (
+                    <p className={styles.fundMeta}>
+                      {formatRub(fund.price)} · лот {fund.lot} · {fund.currency}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className={styles.actionsRow}>
-                  <Button type="button" size="sm" disabled={formLocked} onClick={() => setPickerIndex(index)}>
-                    Выбрать фонд
-                  </Button>
                   <Link
-                    className={[styles.linkBtn, formLocked ? styles.linkBtnDisabled : ""].filter(Boolean).join(" ")}
+                    className={[
+                      styles.linkBtn,
+                      formLocked || row.fund_id <= 0 ? styles.linkBtnDisabled : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     to={`/funds/${row.fund_id}`}
-                    tabIndex={formLocked ? -1 : undefined}
-                    aria-disabled={formLocked}
+                    tabIndex={formLocked || row.fund_id <= 0 ? -1 : undefined}
+                    aria-disabled={formLocked || row.fund_id <= 0}
                     onClick={(e) => {
-                      if (formLocked) e.preventDefault();
+                      if (formLocked || row.fund_id <= 0) e.preventDefault();
                     }}
                   >
                     Открыть фонд
@@ -321,10 +346,8 @@ export function StrategyEditor() {
             <Button
               type="button"
               variant="secondary"
-              disabled={formLocked || (fundsQuery.data?.length ?? 0) === 0}
+              disabled={formLocked}
               onClick={() => {
-                const first = fundsQuery.data?.[0];
-                if (!first) return;
                 setDirty(true);
                 setRows((prev) => [
                   ...prev,
@@ -332,7 +355,8 @@ export function StrategyEditor() {
                     id: null,
                     name: "Новая категория",
                     target_percent: "0.0000",
-                    fund_id: first.id,
+                    fund_id: 0,
+                    fundSnapshot: null,
                     sort_order: prev.length + 1,
                     is_active: true,
                   },
@@ -351,21 +375,6 @@ export function StrategyEditor() {
         </div>
       </div>
 
-      <FundPickerModal
-        open={pickerIndex !== null}
-        funds={fundsQuery.data}
-        isLoading={fundsQuery.isPending}
-        isError={fundsQuery.isError}
-        errorMessage={fundsQuery.error instanceof Error ? fundsQuery.error.message : undefined}
-        selectedFundId={pickerIndex !== null ? rows[pickerIndex]?.fund_id : undefined}
-        onClose={() => setPickerIndex(null)}
-        onRetry={() => void fundsQuery.refetch()}
-        onSelect={(fundId) => {
-          if (pickerIndex === null) return;
-          setDirty(true);
-          updateRow(pickerIndex, { fund_id: fundId });
-        }}
-      />
     </section>
   );
 }
