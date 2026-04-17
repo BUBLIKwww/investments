@@ -4,7 +4,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.domain.money import q_money
+from app.domain.money import q_money, to_decimal
 from app.models.portfolio_position import PortfolioPosition
 
 
@@ -65,7 +65,7 @@ class PortfolioRepository:
             return pos
 
         new_units = int(pos.total_units) + int(purchased_units)
-        new_invested = q_money(Decimal(str(pos.invested_amount)) + purchase_amount_dec)
+        new_invested = q_money(to_decimal(pos.invested_amount) + purchase_amount_dec)
         new_lots = int(pos.total_lots) + int(purchased_lots)
         if new_units <= 0:
             raise ValueError("Invalid units after purchase")

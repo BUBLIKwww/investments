@@ -35,7 +35,7 @@ def _strict_split_total(total: Decimal, actives: list[StrategyCategory]) -> dict
     if not actives:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No active strategy categories")
 
-    sum_pct = sum(to_decimal(c.target_percent) for c in actives)
+    sum_pct = sum((to_decimal(c.target_percent) for c in actives), Decimal("0"))
     if sum_pct != Decimal("100"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

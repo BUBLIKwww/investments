@@ -14,8 +14,8 @@ class CashRepository:
 
     def sum_topups(self, user_id: int) -> Decimal:
         stmt = select(func.coalesce(func.sum(TopupHistory.total_amount), 0)).where(TopupHistory.user_id == user_id)
-        raw = self._db.execute(stmt).scalar_one()
-        return Decimal(str(raw))
+        raw = self._db.execute(stmt).scalar_one_or_none()
+        return raw if isinstance(raw, Decimal) else Decimal(str(raw or 0))
 
     def sum_transaction_amounts(self, user_id: int, operation: str) -> Decimal:
         stmt = (
@@ -25,8 +25,8 @@ class CashRepository:
                 InvestmentTransaction.operation_type == operation,
             )
         )
-        raw = self._db.execute(stmt).scalar_one()
-        return Decimal(str(raw))
+        raw = self._db.execute(stmt).scalar_one_or_none()
+        return raw if isinstance(raw, Decimal) else Decimal(str(raw or 0))
 
     def cash_balance(self, user_id: int) -> Decimal:
         """Пополнения − покупки + продажи (руб.)."""

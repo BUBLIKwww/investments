@@ -46,7 +46,7 @@ def _actives_ordered(categories: list) -> list:
 def _validate_actives(actives: list) -> None:
     if not actives:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Нет активных категорий стратегии")
-    s = sum(to_decimal(c.target_percent) for c in actives)
+    s = sum((to_decimal(c.target_percent) for c in actives), Decimal("0"))
     if s != Decimal("100"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
