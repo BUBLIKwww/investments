@@ -247,7 +247,9 @@ class PortfolioRebalanceService:
                 )
             )
 
-        cash_run = q_money(cash_balance + sum(l.total_amount for l in legs if l.action == "sell"))
+        cash_run = q_money(
+            cash_balance + sum((l.total_amount for l in legs if l.action == "sell"), Decimal("0"))
+        )
 
         for cid, fid, ticker, _op, target_rub in raw_buys:
             fund_ent = self._funds.get_by_id(fid)
@@ -316,12 +318,14 @@ class PortfolioRebalanceService:
             RebalanceActionRead(fund_id=l.fund_id, ticker=l.ticker, action=l.action, amount=l.total_amount)
             for l in legs
         ]
-        buy_sum = q_money(sum(l.total_amount for l in legs if l.action == "buy"))
-        sell_sum = q_money(sum(l.total_amount for l in legs if l.action == "sell"))
+        buy_sum = q_money(sum((l.total_amount for l in legs if l.action == "buy"), Decimal("0")))
+        sell_sum = q_money(sum((l.total_amount for l in legs if l.action == "sell"), Decimal("0")))
         total_used = q_money(buy_sum - sell_sum)
 
         cat_after, cash_after = _simulate_leg_impact(legs, current_by_cat, cash, act_ids)
-        total_m_after = q_money(sum(cat_after.get(int(c.id), Decimal("0")) for c in actives))
+        total_m_after = q_money(
+            sum((cat_after.get(int(c.id), Decimal("0")) for c in actives), Decimal("0"))
+        )
         tw_after = q_money(total_m_after + cash_after)
         before_pct = (
             q_money(total_market / total_wealth * Decimal("100")) if total_wealth > 0 else Decimal("0")

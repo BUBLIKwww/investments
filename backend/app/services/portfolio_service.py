@@ -72,7 +72,9 @@ class PortfolioService:
         categories = self._strategy.list_for_user(user_id)
         cat_by_id = {c.id: c for c in categories}
 
-        total_invested = q_money(sum(to_decimal(p.invested_amount) for p in positions))
+        total_invested = q_money(
+            sum((to_decimal(p.invested_amount) for p in positions), Decimal("0"))
+        )
 
         current_by_position: dict[int, Decimal] = {}
         total_current = Decimal("0")
@@ -103,7 +105,14 @@ class PortfolioService:
                     current_weight_percent=cur_w,
                     current_amount=cur_amt,
                     invested_amount=q_money(
-                        sum(to_decimal(p.invested_amount) for p in positions if int(p.category_id) == c.id)
+                        sum(
+                            (
+                                to_decimal(p.invested_amount)
+                                for p in positions
+                                if int(p.category_id) == c.id
+                            ),
+                            Decimal("0"),
+                        )
                     ),
                 )
             )

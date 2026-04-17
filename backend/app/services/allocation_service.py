@@ -144,7 +144,9 @@ def _maximize_extra_lots(
     safety = 0
     while safety < 10_000:
         safety += 1
-        allocated = q_money(sum(to_decimal(v["actual_allocated_amount"]) for v in per.values()))
+        allocated = q_money(
+            sum((to_decimal(v["actual_allocated_amount"]) for v in per.values()), Decimal("0"))
+        )
         pool = q_money(total_amount - allocated)
         if pool <= 0:
             break
@@ -268,7 +270,7 @@ def calculate_topup_allocation(
             )
         )
 
-    total_allocated = q_money(sum(i.actual_allocated_amount for i in items))
+    total_allocated = q_money(sum((i.actual_allocated_amount for i in items), Decimal("0")))
     total_remainder = q_money(total_amount - total_allocated)
 
     if total_amount > 0 and all(i.purchased_units == 0 for i in items):
