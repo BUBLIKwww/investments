@@ -31,8 +31,14 @@ class TinvestFundsService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query must be at least 2 characters")
         lim = max(1, min(limit, 25))
 
-        from tinkoff.invest.schemas import InstrumentIdType
-        from tinkoff.invest.utils import quotation_to_decimal
+        try:
+            from tinkoff.invest.schemas import InstrumentIdType
+            from tinkoff.invest.utils import quotation_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         out: list[FundSearchResult] = []
         seen_uid: set[str] = set()
@@ -96,8 +102,14 @@ class TinvestFundsService:
             self._db.commit()
             return FundRead.model_validate(self._funds.get_by_id(int(existing.id)) or existing)
 
-        from tinkoff.invest.schemas import InstrumentIdType
-        from tinkoff.invest.utils import quotation_to_decimal
+        try:
+            from tinkoff.invest.schemas import InstrumentIdType
+            from tinkoff.invest.utils import quotation_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         now = datetime.now(UTC)
         with tinvest_client(self._settings) as client:
@@ -147,7 +159,13 @@ class TinvestFundsService:
         uid = (fund.instrument_uid or "").strip()
         if not uid:
             return
-        from tinkoff.invest.utils import quotation_to_decimal
+        try:
+            from tinkoff.invest.utils import quotation_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         now = datetime.now(UTC)
         with tinvest_client(self._settings) as client:

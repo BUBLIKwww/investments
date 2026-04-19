@@ -530,8 +530,8 @@ class PortfolioRebalanceService:
             )
         except ImportError as e:  # pragma: no cover
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Библиотека T-Invest API недоступна",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
             ) from e
 
         with tinvest_client(settings) as client:

@@ -17,15 +17,15 @@ def tinvest_client(settings: Settings) -> Generator[object, None, None]:
         from tinkoff.invest.constants import INVEST_GRPC_API, INVEST_GRPC_API_SANDBOX
     except ImportError as e:  # pragma: no cover
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Сервер: библиотека T-Invest API недоступна",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Интеграция T-Invest временно отключена",
         ) from e
 
     token = (settings.TINVEST_TOKEN or "").strip()
     if not token:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="TINVEST_TOKEN не задан.",
+            detail="Интеграция T-Invest временно отключена",
         )
 
     target = INVEST_GRPC_API_SANDBOX if settings.TINVEST_USE_SANDBOX else INVEST_GRPC_API

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import ROUND_FLOOR, Decimal
 from typing import Literal
 
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -48,6 +49,8 @@ class PortfolioService:
             if source == "live":
                 return self._build_portfolio_live(user_id)
             return self._build_portfolio(user_id)
+        except HTTPException:
+            raise
         except Exception:
             logger.exception("get_portfolio failed user_id=%s source=%s", user_id, source)
             src = source if source in ("live", "simulation") else "simulation"
@@ -183,7 +186,13 @@ class PortfolioService:
         )
 
     def _build_portfolio_live(self, user_id: int) -> PortfolioRead:
-        from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
+        try:
+            from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         br = TinvestBrokerService(self._db, settings)
         account_id = br.resolve_account_id()

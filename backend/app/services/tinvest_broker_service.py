@@ -123,7 +123,13 @@ class TinvestBrokerService:
             return str(candidates[0][1].id)
 
     def rub_cash_on_account(self, account_id: str) -> Decimal:
-        from tinkoff.invest.utils import money_to_decimal
+        try:
+            from tinkoff.invest.utils import money_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         with tinvest_client(self._settings) as client:
             pos = client.operations.get_positions(account_id=account_id)
@@ -135,7 +141,13 @@ class TinvestBrokerService:
 
     def live_engine_positions_and_cash(self, user_id: int, account_id: str) -> tuple[list[LiveEnginePosition], Decimal]:
         """Позиции только по инструментам активных категорий стратегии + RUB на счёте."""
-        from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
+        try:
+            from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
+        except ImportError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Интеграция T-Invest временно отключена",
+            ) from e
 
         categories = self._strategy.list_for_user(user_id)
         actives = sorted((c for c in categories if c.is_active), key=lambda x: (x.sort_order, x.id))
