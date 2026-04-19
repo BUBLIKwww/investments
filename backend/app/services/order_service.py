@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 import uuid
@@ -24,13 +25,18 @@ from app.schemas.order import OrderHistoryItem, OrderResult
 from app.services.pricing.db_provider import DbPricingProvider
 from app.services.portfolio_recalculation_service import PortfolioRecalculationService
 from app.services.tinvest_broker_service import TinvestBrokerService
-from app.services.tinvest_client import tinvest_client
+from app.services.tinvest_client import money_value_to_decimal, quotation_to_decimal, tinvest_client
 
 logger = logging.getLogger(__name__)
 
 _NOTE_PREFIX = "Live T-Invest"
 _RE_ORDER_ID = re.compile(r"order_id=([^;]+)")
 _RE_STATUS = re.compile(r"status=([^;]+)")
+
+
+def _stable_int_id(value: str) -> int:
+    raw = hashlib.sha1(value.encode("utf-8")).hexdigest()[:12]
+    return int(raw, 16)
 
 
 class OrderService:
@@ -82,23 +88,7 @@ class OrderService:
         broker = TinvestBrokerService(self._db, self._settings)
         account_id = broker.resolve_account_id()
 
-        try:
-            from tinkoff.invest.schemas import (
-                OrderDirection,
-                OrderExecutionReportStatus,
-                OrderType,
-            )
-        except ImportError as e:  # pragma: no cover
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Сервер: не установлен пакет T-Invest SDK",
-            ) from e
-
-        direction = (
-            OrderDirection.ORDER_DIRECTION_BUY
-            if action == "buy"
-            else OrderDirection.ORDER_DIRECTION_SELL
-        )
+        direction = "ORDER_DIRECTION_BUY" if action == "buy" else "ORDER_DIRECTION_SELL"
         client_order_id = str(uuid.uuid4())
 
         logger.info(
@@ -108,13 +98,13 @@ class OrderService:
 
         with tinvest_client(self._settings) as client:
             try:
-                r = client.orders.post_order(
+                r = client.post_order(
                     instrument_id=instrument_id,
                     quantity=lots_n,
                     account_id=account_id,
                     order_id=client_order_id,
                     direction=direction,
-                    order_type=OrderType.ORDER_TYPE_MARKET,
+                    order_type="ORDER_TYPE_MARKET",
                 )
             except Exception as e:
                 logger.exception("live_order_failed user=%s fund_id=%s", user_id, fund_id)
@@ -123,24 +113,23 @@ class OrderService:
                     detail=f"T-Invest: {str(e)[:300]}",
                 ) from e
 
-        st_enum = r.execution_report_status
-        status_name = st_enum.name if st_enum is not None else None
-        ok = st_enum not in (
-            OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_REJECTED,
-            OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_CANCELLED,
-            OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_UNSPECIFIED,
-            None,
+        status_name = str(r.get("executionReportStatus") or "").strip() or None
+        ok = status_name not in (
+            "EXECUTION_REPORT_STATUS_REJECTED",
+            "EXECUTION_REPORT_STATUS_CANCELLED",
+            "EXECUTION_REPORT_STATUS_UNSPECIFIED",
+            "",
         )
-        broker_oid = (getattr(r, "order_id", None) or client_order_id) or None
-        msg = (getattr(r, "message", None) or "").strip() or None
+        broker_oid = (str(r.get("orderId") or "").strip() or client_order_id) or None
+        msg = (str(r.get("message") or "").strip() or None)
 
         tx_id: int | None = None
         if ok:
             now = datetime.now(timezone.utc)
-            unit_price = q_price(self._pricing.get_unit_price(fund))
+            unit_price = quotation_to_decimal(r.get("executedOrderPrice")) or q_price(self._pricing.get_unit_price(fund))
             if unit_price <= 0:
                 unit_price = q_price(Decimal("0.01"))
-            total_amt = q_money(Decimal(int(quantity)) * unit_price)
+            total_amt = abs(money_value_to_decimal(r.get("totalOrderAmount"))) or q_money(Decimal(int(quantity)) * unit_price)
             op = (
                 TransactionOperationType.BUY.value
                 if action == "buy"
@@ -186,8 +175,61 @@ class OrderService:
         )
 
     def history(self, user_id: int) -> list[OrderHistoryItem]:
-        rows = self._tx_repo.list_for_user(user_id)
+        broker = TinvestBrokerService(self._db, self._settings)
+        try:
+            account_id = broker.resolve_account_id()
+        except HTTPException:
+            account_id = ""
+
         out: list[OrderHistoryItem] = []
+        if account_id:
+            with tinvest_client(self._settings) as client:
+                data = client.get_operations_by_cursor(account_id, limit=100)
+            remote_rows = data.get("items") if isinstance(data.get("items"), list) else data.get("operations")
+            if isinstance(remote_rows, list):
+                for item in remote_rows:
+                    operation_type = str(item.get("type") or item.get("operationType") or "").strip()
+                    if operation_type not in ("OPERATION_TYPE_BUY", "OPERATION_TYPE_SELL"):
+                        continue
+                    instrument_id = (
+                        str(item.get("instrumentUid") or "").strip()
+                        or str(item.get("figi") or "").strip()
+                    )
+                    fund = None
+                    if instrument_id:
+                        fund = self._funds.get_by_instrument_uid(instrument_id) or self._funds.get_by_figi(instrument_id)
+                    fund_id = int(fund.id) if fund is not None else 0
+                    try:
+                        category_id = self._category_for_fund(user_id, fund_id) if fund_id else 0
+                    except HTTPException:
+                        category_id = 0
+                    price_per_unit = money_value_to_decimal(item.get("price"))
+                    if price_per_unit <= 0:
+                        price_per_unit = Decimal("0.01")
+                    total_amount = abs(money_value_to_decimal(item.get("payment")))
+                    quantity = int(quotation_to_decimal(item.get("quantity")) or Decimal("0"))
+                    op_id = str(item.get("id") or item.get("parentOperationId") or f"{instrument_id}:{operation_type}:{item.get('date')}")
+                    dt_raw = str(item.get("date") or datetime.now(timezone.utc).isoformat())
+                    out.append(
+                        OrderHistoryItem(
+                            id=_stable_int_id(op_id),
+                            fund_id=fund_id,
+                            category_id=category_id,
+                            operation_type=str(item.get("type") or item.get("operationType") or ""),
+                            quantity=quantity,
+                            price_per_unit=price_per_unit,
+                            total_amount=total_amount,
+                            executed_at=datetime.fromisoformat(dt_raw.replace("Z", "+00:00")),
+                            note="Live T-Invest REST",
+                            broker_order_id=(str(item.get("id") or "").strip() or None),
+                            execution_status=str(item.get("state") or "").strip() or None,
+                        )
+                    )
+                if out:
+                    return out
+
+        rows = self._tx_repo.list_for_user(user_id)
+        out = []
         for t in rows:
             note = (t.note or "").strip()
             if not note.startswith(_NOTE_PREFIX):

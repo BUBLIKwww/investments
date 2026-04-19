@@ -14,7 +14,7 @@ from app.domain.money import q_price
 from app.models.fund import Fund
 from app.repositories.fund_repository import FundRepository
 from app.schemas.fund import FundAddRequest, FundRead, FundSearchResult
-from app.services.tinvest_client import tinvest_client
+from app.services.tinvest_client import quotation_to_decimal, tinvest_client
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +31,14 @@ class TinvestFundsService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="query must be at least 2 characters")
         lim = max(1, min(limit, 25))
 
-        from tinkoff.invest.schemas import InstrumentIdType
-        from tinkoff.invest.utils import quotation_to_decimal
-
         out: list[FundSearchResult] = []
         seen_uid: set[str] = set()
 
         with tinvest_client(self._settings) as client:
-            r = client.instruments.find_instrument(query=q, api_trade_available_flag=True)
+            r = client.find_instrument(q)
             uids_order: list[str] = []
-            for short in r.instruments:
-                uid = (short.uid or "").strip()
+            for short in r:
+                uid = (str(short.get("uid") or "").strip())
                 if not uid or uid in seen_uid:
                     continue
                 seen_uid.add(uid)
@@ -52,25 +49,22 @@ class TinvestFundsService:
             if not uids_order:
                 return []
 
-            lp = client.market_data.get_last_prices(instrument_id=uids_order)
+            lp = client.get_last_prices(uids_order)
             price_by_uid: dict[str, Decimal] = {}
-            for p in lp.last_prices:
-                k = (p.instrument_uid or p.figi or "").strip()
+            for p in lp:
+                k = (str(p.get("instrumentUid") or "").strip() or str(p.get("figi") or "").strip())
                 if k:
-                    price_by_uid[k] = quotation_to_decimal(p.price)
+                    price_by_uid[k] = quotation_to_decimal(p.get("price"))
 
             for uid in uids_order:
-                full = client.instruments.get_instrument_by(
-                    id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_UID,
-                    id=uid,
-                ).instrument
+                full = client.get_instrument_by(id_type="INSTRUMENT_ID_TYPE_UID", instrument_id=uid)
                 if full is None:
                     continue
-                figi_v = (full.figi or "").strip() or None
-                ticker = (full.ticker or "").strip().upper()
-                name = (full.name or ticker).strip()
-                lot = int(full.lot or 1)
-                cur = (full.currency or "rub").upper()[:8]
+                figi_v = (str(full.get("figi") or "").strip() or None)
+                ticker = str(full.get("ticker") or "").strip().upper()
+                name = (str(full.get("name") or ticker).strip())
+                lot = int(full.get("lot") or 1)
+                cur = str(full.get("currency") or "rub").upper()[:8]
                 last = price_by_uid.get(uid)
                 out.append(
                     FundSearchResult(
@@ -96,32 +90,26 @@ class TinvestFundsService:
             self._db.commit()
             return FundRead.model_validate(self._funds.get_by_id(int(existing.id)) or existing)
 
-        from tinkoff.invest.schemas import InstrumentIdType
-        from tinkoff.invest.utils import quotation_to_decimal
-
         now = datetime.now(UTC)
         with tinvest_client(self._settings) as client:
-            full = client.instruments.get_instrument_by(
-                id_type=InstrumentIdType.INSTRUMENT_ID_TYPE_UID,
-                id=uid,
-            ).instrument
+            full = client.get_instrument_by(id_type="INSTRUMENT_ID_TYPE_UID", instrument_id=uid)
             if full is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instrument not found in T-Invest")
-            api_ticker = (full.ticker or "").strip().upper()
+            api_ticker = str(full.get("ticker") or "").strip().upper()
             if api_ticker and api_ticker != payload.ticker.strip().upper():
                 logger.warning("Ticker mismatch client=%s api=%s for uid=%s", payload.ticker, api_ticker, uid)
-            name = (full.name or payload.name).strip()
-            lot = int(full.lot or payload.lot)
-            cur = (full.currency or payload.currency or "rub").upper()[:8]
-            figi_v = (full.figi or payload.figi or "").strip() or None
+            name = (str(full.get("name") or payload.name).strip())
+            lot = int(full.get("lot") or payload.lot)
+            cur = str(full.get("currency") or payload.currency or "rub").upper()[:8]
+            figi_v = (str(full.get("figi") or payload.figi or "").strip() or None)
             ticker_final = api_ticker or payload.ticker.strip().upper()
 
-            lp = client.market_data.get_last_prices(instrument_id=[uid])
+            lp = client.get_last_prices([uid])
             price = Decimal("0")
-            for p in lp.last_prices:
-                k = (p.instrument_uid or "").strip()
+            for p in lp:
+                k = (str(p.get("instrumentUid") or "").strip())
                 if k == uid:
-                    price = quotation_to_decimal(p.price)
+                    price = quotation_to_decimal(p.get("price"))
                     break
             if price <= 0:
                 raise HTTPException(
@@ -147,14 +135,13 @@ class TinvestFundsService:
         uid = (fund.instrument_uid or "").strip()
         if not uid:
             return
-        from tinkoff.invest.utils import quotation_to_decimal
 
         now = datetime.now(UTC)
         with tinvest_client(self._settings) as client:
-            lp = client.market_data.get_last_prices(instrument_id=[uid])
-            for p in lp.last_prices:
-                if (p.instrument_uid or "").strip() == uid:
-                    dec = quotation_to_decimal(p.price)
+            lp = client.get_last_prices([uid])
+            for p in lp:
+                if str(p.get("instrumentUid") or "").strip() == uid:
+                    dec = quotation_to_decimal(p.get("price"))
                     if dec > 0:
                         self._funds.update_price(int(fund.id), price=q_price(dec), updated_at=now)
                     return

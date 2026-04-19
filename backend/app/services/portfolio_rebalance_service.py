@@ -522,18 +522,6 @@ class PortfolioRebalanceService:
 
         results: list[RebalanceLiveOrderResult] = []
 
-        try:
-            from tinkoff.invest.schemas import (
-                OrderDirection,
-                OrderExecutionReportStatus,
-                OrderType,
-            )
-        except ImportError as e:  # pragma: no cover
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Библиотека T-Invest API недоступна",
-            ) from e
-
         with tinvest_client(settings) as client:
             for leg in ordered:
                 lo = max(1, int(leg.lot))
@@ -551,11 +539,7 @@ class PortfolioRebalanceService:
                     )
                     continue
                 oid = str(uuid.uuid4())
-                direction = (
-                    OrderDirection.ORDER_DIRECTION_BUY
-                    if leg.action == "buy"
-                    else OrderDirection.ORDER_DIRECTION_SELL
-                )
+                direction = "ORDER_DIRECTION_BUY" if leg.action == "buy" else "ORDER_DIRECTION_SELL"
                 logger.info(
                     "live_order_submit user=%s account=%s instrument=%s lots=%s dir=%s order_id=%s",
                     user_id,
@@ -566,27 +550,26 @@ class PortfolioRebalanceService:
                     oid,
                 )
                 try:
-                    r = client.orders.post_order(
+                    r = client.post_order(
                         instrument_id=leg.instrument_id,
                         quantity=lots_n,
                         account_id=account_id,
                         order_id=oid,
                         direction=direction,
-                        order_type=OrderType.ORDER_TYPE_MARKET,
+                        order_type="ORDER_TYPE_MARKET",
                     )
-                    st = r.execution_report_status.name if r.execution_report_status is not None else None
-                    st_e = r.execution_report_status
-                    ok = st_e not in (
-                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_REJECTED,
-                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_CANCELLED,
-                        OrderExecutionReportStatus.EXECUTION_REPORT_STATUS_UNSPECIFIED,
+                    st = str(r.get("executionReportStatus") or "").strip() or None
+                    ok = st not in (
+                        "EXECUTION_REPORT_STATUS_REJECTED",
+                        "EXECUTION_REPORT_STATUS_CANCELLED",
+                        "EXECUTION_REPORT_STATUS_UNSPECIFIED",
                         None,
                     )
-                    msg = (r.message or "").strip() or None
+                    msg = (str(r.get("message") or "").strip() or None)
                     logger.info(
                         "live_order_result user=%s broker_order=%s status=%s msg=%s",
                         user_id,
-                        r.order_id,
+                        r.get("orderId"),
                         st,
                         msg,
                     )
@@ -597,7 +580,7 @@ class PortfolioRebalanceService:
                             instrument_id=leg.instrument_id,
                             lots=lots_n,
                             success=ok,
-                            order_id=r.order_id or None,
+                            order_id=(str(r.get("orderId") or "").strip() or None),
                             execution_status=st,
                             message=msg,
                         )

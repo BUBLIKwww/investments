@@ -12,6 +12,7 @@ from app.domain.money import q_price
 from app.models.fund import Fund
 from app.repositories.fund_repository import FundRepository
 from app.schemas.fund import FundRead, FundsPricesRefreshResponse
+from app.services.tinvest_client import quotation_to_decimal, tinvest_client
 
 
 class PricingService:
@@ -27,16 +28,6 @@ class PricingService:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="TINVEST_TOKEN не задан — обновление цен через T-Invest API недоступно.",
             )
-
-        try:
-            from tinkoff.invest import Client
-            from tinkoff.invest.constants import INVEST_GRPC_API, INVEST_GRPC_API_SANDBOX
-            from tinkoff.invest.utils import quotation_to_decimal
-        except ImportError as e:  # pragma: no cover
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Сервер: библиотека T-Invest API недоступна",
-            ) from e
 
         funds = self._funds.list_active()
         now = datetime.now(UTC)
@@ -58,16 +49,14 @@ class PricingService:
                 funds=[FundRead.model_validate(x) for x in refreshed],
             )
 
-        target = INVEST_GRPC_API_SANDBOX if self._settings.TINVEST_USE_SANDBOX else INVEST_GRPC_API
-
-        with Client(token, target=target) as client:
-            lp = client.market_data.get_last_prices(instrument_id=uids)
+        with tinvest_client(self._settings) as client:
+            lp = client.get_last_prices(uids)
             price_map: dict[str, Decimal] = {}
-            for p in lp.last_prices:
-                key = (p.instrument_uid or "").strip()
+            for p in lp:
+                key = (str(p.get("instrumentUid") or "").strip() or str(p.get("figi") or "").strip())
                 if not key:
                     continue
-                price_map[key] = quotation_to_decimal(p.price)
+                price_map[key] = quotation_to_decimal(p.get("price"))
 
         updated_count = 0
         for f in funds:
