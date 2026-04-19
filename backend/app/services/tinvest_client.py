@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from decimal import Decimal
 import json
 
+import certifi
 import httpx
 from fastapi import HTTPException, status
 
@@ -53,6 +54,8 @@ class TinvestRestClient:
         self._http = httpx.Client(
             base_url=base_url,
             timeout=30.0,
+            verify=certifi.where(),
+            trust_env=False,
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
@@ -66,6 +69,11 @@ class TinvestRestClient:
     def _post(self, method: str, payload: dict) -> dict:
         try:
             resp = self._http.post(method, json=payload)
+        except (httpx.ConnectError, httpx.TransportError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"T-Invest REST SSL/transport error: {str(e)[:300]}",
+            ) from e
         except httpx.HTTPError as e:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
