@@ -47,6 +47,6 @@ app.include_router(api_router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "build_marker": "2026-04-19-live-check-1"}
 
 # force deploy
