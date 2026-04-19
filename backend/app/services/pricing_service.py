@@ -25,7 +25,7 @@ class PricingService:
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Интеграция T-Invest временно отключена",
+                detail="TINVEST_TOKEN не задан — обновление цен через T-Invest API недоступно.",
             )
 
         try:
@@ -34,8 +34,8 @@ class PricingService:
             from tinkoff.invest.utils import quotation_to_decimal
         except ImportError as e:  # pragma: no cover
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Интеграция T-Invest временно отключена",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Сервер: библиотека T-Invest API недоступна",
             ) from e
 
         funds = self._funds.list_active()

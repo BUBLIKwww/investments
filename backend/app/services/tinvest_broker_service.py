@@ -78,6 +78,14 @@ class TinvestBrokerService:
         env = (self._settings.TINVEST_DEFAULT_ACCOUNT_ID or "").strip()
         if env:
             return env
+        # Последний резерв: первый подходящий открытый счёт с полным доступом.
+        try:
+            picked = self.pick_default_broker_account_id()
+        except Exception:
+            logger.exception("pick_default_broker_account_id failed")
+            picked = None
+        if picked:
+            return picked
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Не выбран счёт T‑Invest: GET /api/v1/broker/accounts и PUT /api/v1/broker/settings",
@@ -123,13 +131,7 @@ class TinvestBrokerService:
             return str(candidates[0][1].id)
 
     def rub_cash_on_account(self, account_id: str) -> Decimal:
-        try:
-            from tinkoff.invest.utils import money_to_decimal
-        except ImportError as e:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Интеграция T-Invest временно отключена",
-            ) from e
+        from tinkoff.invest.utils import money_to_decimal
 
         with tinvest_client(self._settings) as client:
             pos = client.operations.get_positions(account_id=account_id)
@@ -141,13 +143,7 @@ class TinvestBrokerService:
 
     def live_engine_positions_and_cash(self, user_id: int, account_id: str) -> tuple[list[LiveEnginePosition], Decimal]:
         """Позиции только по инструментам активных категорий стратегии + RUB на счёте."""
-        try:
-            from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
-        except ImportError as e:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Интеграция T-Invest временно отключена",
-            ) from e
+        from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
 
         categories = self._strategy.list_for_user(user_id)
         actives = sorted((c for c in categories if c.is_active), key=lambda x: (x.sort_order, x.id))

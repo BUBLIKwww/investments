@@ -1,6 +1,16 @@
 from fastapi import APIRouter
 
-from app.api.routes import broker, funds, portfolio, rebalance, strategy, topups, transactions, users
+from app.api.routes import (
+    broker,
+    funds,
+    orders,
+    portfolio,
+    rebalance,
+    strategy,
+    topups,
+    transactions,
+    users,
+)
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(users.router, prefix="/users", tags=["users"])
@@ -11,3 +21,4 @@ api_router.include_router(portfolio.router, prefix="/portfolio", tags=["portfoli
 api_router.include_router(topups.router, prefix="/topups", tags=["topups"])
 api_router.include_router(transactions.router, prefix="/transactions", tags=["transactions"])
 api_router.include_router(rebalance.router, prefix="/rebalance", tags=["rebalance"])
+api_router.include_router(orders.router, prefix="/orders", tags=["orders"])
