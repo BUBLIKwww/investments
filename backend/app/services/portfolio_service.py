@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from decimal import ROUND_FLOOR, Decimal
 from typing import Literal
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -17,7 +18,7 @@ from app.schemas.fund import FundRead
 from app.schemas.portfolio import CategorySummary, PortfolioPositionRead, PortfolioRead
 from app.services.pricing.db_provider import DbPricingProvider
 from app.services.tinvest_broker_service import TinvestBrokerService
-from app.services.tinvest_client import tinvest_client
+from app.services.tinvest_client import money_value_to_decimal, quotation_to_decimal, tinvest_client
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,8 @@ class PortfolioService:
             if source == "live":
                 return self._build_portfolio_live(user_id)
             return self._build_portfolio(user_id)
+        except HTTPException:
+            raise
         except Exception:
             logger.exception("get_portfolio failed user_id=%s source=%s", user_id, source)
             src = source if source in ("live", "simulation") else "simulation"
@@ -183,8 +186,6 @@ class PortfolioService:
         )
 
     def _build_portfolio_live(self, user_id: int) -> PortfolioRead:
-        from tinkoff.invest.utils import money_to_decimal, quotation_to_decimal
-
         br = TinvestBrokerService(self._db, settings)
         account_id = br.resolve_account_id()
 
@@ -201,28 +202,28 @@ class PortfolioService:
         rows: list[dict] = []
 
         with tinvest_client(settings) as client:
-            port = client.operations.get_portfolio(account_id=account_id)
-            for p in port.positions:
-                uid = (p.instrument_uid or "").strip()
-                fg = (p.figi or "").strip()
+            port = client.get_portfolio(account_id)
+            for p in port.get("positions", []):
+                uid = (str(p.get("instrumentUid") or "").strip())
+                fg = (str(p.get("figi") or "").strip())
                 fund_ent = self._funds.get_by_instrument_uid(uid) if uid else None
                 if fund_ent is None and fg:
                     fund_ent = self._funds.get_by_figi(fg)
                 if fund_ent is None:
                     logger.info("live portfolio: skip instrument without DB fund uid=%s figi=%s", uid, fg)
                     continue
-                qty_dec = quotation_to_decimal(p.quantity)
+                qty_dec = quotation_to_decimal(p.get("quantity"))
                 units = int(qty_dec.to_integral_value(rounding=ROUND_FLOOR)) if qty_dec > 0 else 0
                 if units < 1:
                     continue
                 inv_unit = (
-                    money_to_decimal(p.average_position_price)
-                    if p.average_position_price is not None
+                    money_value_to_decimal(p.get("averagePositionPrice"))
+                    if p.get("averagePositionPrice") is not None
                     else Decimal("0")
                 )
                 inv_unit = q_price(inv_unit)
                 unit_cur = (
-                    money_to_decimal(p.current_price) if p.current_price is not None else Decimal("0")
+                    money_value_to_decimal(p.get("currentPrice")) if p.get("currentPrice") is not None else Decimal("0")
                 )
                 if unit_cur <= 0:
                     unit_cur = q_price(self._pricing.get_unit_price(fund_ent))
