@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 from decimal import Decimal
+import json
 
 import httpx
 from fastapi import HTTPException, status
@@ -92,7 +93,26 @@ class TinvestRestClient:
             {"status": status_name},
         )
         rows = data.get("accounts")
-        return rows if isinstance(rows, list) else []
+        if isinstance(rows, list):
+            return [x for x in rows if isinstance(x, dict)]
+
+        payload = data.get("payload")
+        if isinstance(payload, dict):
+            rows = payload.get("accounts")
+            if isinstance(rows, list):
+                return [x for x in rows if isinstance(x, dict)]
+
+        if isinstance(data, list):
+            return [x for x in data if isinstance(x, dict)]
+
+        if not isinstance(data, dict):
+            return []
+
+        snippet = json.dumps(data, ensure_ascii=False)[:500]
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Неожиданный ответ T-Invest GetAccounts: {snippet or 'empty json'}",
+        )
 
     def get_portfolio(self, account_id: str, *, currency: str = "RUB") -> dict:
         return self._post(
