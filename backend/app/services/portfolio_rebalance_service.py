@@ -531,7 +531,7 @@ class PortfolioRebalanceService:
         except ImportError as e:  # pragma: no cover
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Пакет tinkoff-investments не установлен",
+                detail="Библиотека T-Invest API недоступна",
             ) from e
 
         with tinvest_client(settings) as client:

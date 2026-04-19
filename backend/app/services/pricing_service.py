@@ -35,7 +35,7 @@ class PricingService:
         except ImportError as e:  # pragma: no cover
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Сервер: не установлен пакет tinkoff-investments",
+                detail="Сервер: библиотека T-Invest API недоступна",
             ) from e
 
         funds = self._funds.list_active()
