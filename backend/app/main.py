@@ -7,6 +7,7 @@ import app.models  # noqa: F401 — регистрация моделей в Bas
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.database import SessionLocal, engine
+from app.core.schema_bootstrap import ensure_funds_schema
 from app.db.base import Base
 from app.services.portfolio_recalculation_service import PortfolioRecalculationService
 from app.services.seed_service import SeedService
@@ -16,6 +17,7 @@ from app.services.seed_service import SeedService
 async def lifespan(app: FastAPI):
     # Railway / деплой: таблицы есть даже без успешного `alembic upgrade` (Alembic в проекте остаётся).
     Base.metadata.create_all(bind=engine)
+    ensure_funds_schema(engine)
     db = SessionLocal()
     try:
         SeedService(db, settings).ensure_seeded()
@@ -46,3 +48,5 @@ app.include_router(api_router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# force deploy
