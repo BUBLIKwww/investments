@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 
 import app.models  # noqa: F401 — регистрация моделей в Base.metadata для create_all
 from app.api.router import api_router
@@ -43,6 +44,11 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+@app.get("/ping", response_class=PlainTextResponse)
+def ping():
+    return "ok"
 
 
 @app.get("/health")
